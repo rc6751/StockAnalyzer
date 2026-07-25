@@ -122,6 +122,7 @@ export async function GET(request) {
       company_name: text(p.longName) || text(p.shortName) || ticker,
       sector: text(a.sector) || "Unknown",
       industry: text(a.industry) || "Unknown",
+      business_summary: text(a.longBusinessSummary) || "",
       current_price: raw(f.currentPrice) ?? raw(p.regularMarketPrice),
       market_cap: raw(p.marketCap),
       trailing_pe: raw(s.trailingPE),
