@@ -1,14 +1,14 @@
 import Link from "next/link";
 
 const markets = [
-  { name: "S&P 500", symbol: "SPX", amount: "6,388.64", pointChange: "+26.73", change: "+0.42%", direction: "up" },
-  { name: "Nasdaq", symbol: "IXIC", amount: "21,108.32", pointChange: "+148.67", change: "+0.71%", direction: "up" },
   { name: "Dow", symbol: "DJI", amount: "44,901.12", pointChange: "-80.97", change: "-0.18%", direction: "down" },
-  { name: "ETHU", symbol: "ETHU", amount: "$43.76", pointChange: "+$0.54", change: "+1.24%", direction: "up" },
+  { name: "Nasdaq", symbol: "IXIC", amount: "21,108.32", pointChange: "+148.67", change: "+0.71%", direction: "up" },
+  { name: "S&P 500", symbol: "SPX", amount: "6,388.64", pointChange: "+26.73", change: "+0.42%", direction: "up" },
+  { name: "VIX", symbol: "VIX", amount: "15.36", pointChange: "-0.18", change: "-1.16%", direction: "down" },
   { name: "Bitcoin", symbol: "BTC", amount: "$118,420.00", pointChange: "+$976.00", change: "+0.83%", direction: "up" },
+  { name: "ETHU", symbol: "ETHU", amount: "$43.76", pointChange: "+$0.54", change: "+1.24%", direction: "up" },
   { name: "Gold", symbol: "GC", amount: "$3,336.70", pointChange: "-$3.10", change: "-0.09%", direction: "down" },
   { name: "Oil", symbol: "WTI", amount: "$65.16", pointChange: "+$0.23", change: "+0.36%", direction: "up" },
-  { name: "VIX", symbol: "VIX", amount: "15.36", pointChange: "-0.18", change: "-1.16%", direction: "down" },
 ];
 
 export default function Home() {
@@ -100,7 +100,7 @@ export default function Home() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {positive ? "▲" : "▼"} {market.pointChange} ({market.change})
+                    {positive ? "▲" : "▼"} {market.pointChange}
                   </div>
                 </article>
               );
