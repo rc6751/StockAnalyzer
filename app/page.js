@@ -1,13 +1,14 @@
 import Link from "next/link";
 
 const markets = [
-  { name: "S&P 500", symbol: "SPX", change: "+0.42%", direction: "up" },
-  { name: "Nasdaq", symbol: "IXIC", change: "+0.71%", direction: "up" },
-  { name: "Dow", symbol: "DJI", change: "-0.18%", direction: "down" },
-  { name: "ETHU", symbol: "ETHU", change: "+1.24%", direction: "up" },
-  { name: "Bitcoin", symbol: "BTC", change: "+0.83%", direction: "up" },
-  { name: "Gold", symbol: "GC", change: "-0.09%", direction: "down" },
-  { name: "Oil", symbol: "WTI", change: "+0.36%", direction: "up" },
+  { name: "S&P 500", symbol: "SPX", amount: "6,388.64", pointChange: "+26.73", change: "+0.42%", direction: "up" },
+  { name: "Nasdaq", symbol: "IXIC", amount: "21,108.32", pointChange: "+148.67", change: "+0.71%", direction: "up" },
+  { name: "Dow", symbol: "DJI", amount: "44,901.12", pointChange: "-80.97", change: "-0.18%", direction: "down" },
+  { name: "ETHU", symbol: "ETHU", amount: "$43.76", pointChange: "+$0.54", change: "+1.24%", direction: "up" },
+  { name: "Bitcoin", symbol: "BTC", amount: "$118,420.00", pointChange: "+$976.00", change: "+0.83%", direction: "up" },
+  { name: "Gold", symbol: "GC", amount: "$3,336.70", pointChange: "-$3.10", change: "-0.09%", direction: "down" },
+  { name: "Oil", symbol: "WTI", amount: "$65.16", pointChange: "+$0.23", change: "+0.36%", direction: "up" },
+  { name: "VIX", symbol: "VIX", amount: "15.36", pointChange: "-0.18", change: "-1.16%", direction: "down" },
 ];
 
 export default function Home() {
@@ -16,19 +17,97 @@ export default function Home() {
       style={{
         minHeight: "100vh",
         boxSizing: "border-box",
-        padding: "24px",
+        padding: "20px 24px 28px",
         fontFamily: "Arial, sans-serif",
         color: "#13233a",
         background: "#ffffff",
       }}
     >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1180px",
-          margin: "0 auto",
-        }}
-      >
+      <div style={{ width: "100%", maxWidth: "1180px", margin: "0 auto" }}>
+        <section aria-label="Market snapshot" style={{ padding: "0 0 24px" }}>
+          <div style={{ marginBottom: "14px" }}>
+            <h2 style={{ margin: 0, fontSize: "24px", color: "#13233a" }}>
+              Market Snapshot
+            </h2>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(128px, 1fr))",
+              gap: "10px",
+            }}
+          >
+            {markets.map((market) => {
+              const positive = market.direction === "up";
+              const movementColor = positive ? "#16813a" : "#c13d3d";
+
+              return (
+                <article
+                  key={market.name}
+                  style={{
+                    minWidth: 0,
+                    padding: "13px 14px",
+                    border: "1px solid #dce5f0",
+                    borderRadius: "10px",
+                    background: "#ffffff",
+                    boxShadow: "0 4px 13px rgba(25, 54, 91, 0.08)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "7px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        color: movementColor,
+                        fontSize: "14px",
+                        fontWeight: 800,
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {market.name}
+                    </span>
+                    <span style={{ color: "#8290a3", fontSize: "11px", fontWeight: 700 }}>
+                      {market.symbol}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      color: "#111111",
+                      fontSize: "18px",
+                      fontWeight: 800,
+                      lineHeight: 1.15,
+                    }}
+                  >
+                    {market.amount}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "6px",
+                      color: movementColor,
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {positive ? "▲" : "▼"} {market.pointChange} ({market.change})
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
         <section
           style={{
             minHeight: "430px",
@@ -40,24 +119,11 @@ export default function Home() {
             textAlign: "center",
             borderRadius: "22px",
             color: "#ffffff",
-            background: "linear-gradient(135deg, #0d56a6 0%, #08386f 100%)",
-            boxShadow: "0 18px 45px rgba(8, 56, 111, 0.2)",
+            background: "linear-gradient(135deg, #073b78 0%, #031f43 100%)",
+            boxShadow: "0 18px 45px rgba(3, 31, 67, 0.28)",
           }}
         >
           <div style={{ maxWidth: "800px" }}>
-            <p
-              style={{
-                margin: "0 0 14px",
-                fontSize: "14px",
-                fontWeight: 800,
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-                color: "#cfe4ff",
-              }}
-            >
-              Long-Term Equity Research
-            </p>
-
             <h1
               style={{
                 margin: 0,
@@ -98,111 +164,6 @@ export default function Home() {
             >
               Open Stock Scorecard
             </Link>
-          </div>
-        </section>
-
-        <section
-          aria-label="Market snapshot"
-          style={{
-            padding: "32px 0 8px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "end",
-              justifyContent: "space-between",
-              gap: "16px",
-              marginBottom: "16px",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "22px",
-                  color: "#13233a",
-                }}
-              >
-                Market Snapshot
-              </h2>
-              <p
-                style={{
-                  margin: "6px 0 0",
-                  color: "#637086",
-                  fontSize: "14px",
-                }}
-              >
-                Compact reference cards for major markets and assets
-              </p>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(125px, 1fr))",
-              gap: "12px",
-            }}
-          >
-            {markets.map((market) => {
-              const positive = market.direction === "up";
-              return (
-                <article
-                  key={market.name}
-                  style={{
-                    minWidth: 0,
-                    padding: "14px 15px",
-                    border: "1px solid #dce5f0",
-                    borderRadius: "10px",
-                    background: "#ffffff",
-                    boxShadow: "0 5px 16px rgba(25, 54, 91, 0.08)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        overflow: "hidden",
-                        color: "#172c49",
-                        fontSize: "14px",
-                        fontWeight: 800,
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {market.name}
-                    </span>
-                    <span
-                      style={{
-                        color: "#8290a3",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {market.symbol}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      marginTop: "9px",
-                      color: positive ? "#16813a" : "#c13d3d",
-                      fontSize: "15px",
-                      fontWeight: 800,
-                    }}
-                  >
-                    {positive ? "▲" : "▼"} {market.change}
-                  </div>
-                </article>
-              );
-            })}
           </div>
         </section>
       </div>
