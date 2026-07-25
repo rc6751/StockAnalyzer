@@ -38,6 +38,41 @@ function fairValue(d) {
   if (target && target > 0) estimates.push(target);
   return estimates.length ? estimates.reduce((a, b) => a + b, 0) / estimates.length : null;
 }
+
+function moatAssessment(d) {
+  const text = `${d.company_name || ""} ${d.sector || ""} ${d.industry || ""} ${d.business_summary || ""}`.toLowerCase();
+  const hasAny = (terms) => terms.some((term) => text.includes(term));
+
+  // This is a consistent screening estimate of how realistically the core product,
+  // service, technology, platform, or ecosystem can be duplicated within 2+ years.
+  if (hasAny([
+    "semiconductor equipment", "lithography", "payment network", "credit services",
+    "exchange", "market data", "operating system", "database infrastructure",
+    "electronic design automation", "aerospace & defense", "railroad"
+  ])) return { score: 20, label: "Cannot realistically be duplicated", reason: "The company operates a highly specialized platform, network, technology, or infrastructure that competitors cannot realistically duplicate within the 2+ year horizon." };
+
+  if (hasAny([
+    "software - infrastructure", "software—infrastructure", "software - application",
+    "internet content & information", "consumer electronics", "semiconductors",
+    "biotechnology", "medical devices", "communication equipment", "specialty industrial machinery",
+    "telecom services", "capital markets"
+  ])) return { score: 15, label: "Very difficult to duplicate", reason: "The company appears to have a specialized product, service, platform, ecosystem, intellectual property base, or installed network that would be very difficult to duplicate within 2+ years." };
+
+  if (hasAny([
+    "specialty retail", "discount stores", "restaurants", "beverages", "household",
+    "packaged foods", "drug manufacturers", "healthcare plans", "information technology services",
+    "industrial distribution", "farm & heavy construction machinery", "auto manufacturers"
+  ])) return { score: 10, label: "Differentiated but duplicable", reason: "The company is differentiated, but a well-funded competitor could build or offer a reasonably comparable product or service over time." };
+
+  if (hasAny([
+    "airlines", "lodging", "apparel", "footwear", "department stores", "grocery stores",
+    "trucking", "steel", "aluminum", "chemicals", "building materials", "oil & gas",
+    "utilities", "banks", "insurance", "real estate"
+  ])) return { score: 5, label: "Easy to copy or substitute", reason: "The product or service can generally be copied, matched, or substituted by established competitors." };
+
+  return { score: 0, label: "No verified non-duplicable advantage", reason: "Available market data does not verify a product or service that competitors cannot realistically duplicate within 2+ years." };
+}
+
 function analyze(d, macro) {
   let items = [];
   const pe = num(d.forward_pe) ?? num(d.trailing_pe);
@@ -64,14 +99,9 @@ function analyze(d, macro) {
     metric("Growth Consistency", known ? positive/known : null, known ? 2*positive/known : 0,2,"Rewards multiple growth measures moving in the same positive direction."),
   ]; categories.push(category("Growth", items,20));
 
-  const roe=num(d.roe), gross=num(d.gross_margin), operating=num(d.operating_margin), profit=num(d.profit_margin), institutions=num(d.held_percent_institutions);
-  const margins=[gross,profit].filter((x)=>x!==null), blended=margins.length?margins.reduce((a,b)=>a+b,0)/margins.length:null;
+  const moat = moatAssessment(d);
   items=[
-    metric("Return on Equity",roe,qualityPoints(roe,[[.25,1],[.18,.8],[.12,.55],[.08,.3]],4),4,"Persistently strong returns suggest pricing power or capital efficiency."),
-    metric("Operating Margin",operating,qualityPoints(operating,[[.30,1],[.20,.8],[.12,.55],[.07,.3]],4),4,"High operating margins may indicate differentiation or scale advantages."),
-    metric("Margin Strength",blended,qualityPoints(blended,[[.40,1],[.25,.8],[.15,.55],[.08,.3]],4),4,"Blends gross and net profitability as a durability proxy."),
-    metric("Competitive Advantage Consistency",null,(revenue!==null&&revenue>0?2:0)+(earnings!==null&&earnings>0?2:0),4,"Positive revenue and earnings trends support evidence of durable demand."),
-    metric("Market Leadership Proxy",institutions,qualityPoints(institutions,[[.75,1],[.55,.75],[.35,.5],[.15,.25]],4),4,"Institutional sponsorship is used only as a limited proxy for business credibility."),
+    metric("Product / Service Duplication Difficulty",moat.label,moat.score,20,moat.reason),
   ]; categories.push(category("Moat",items,20));
 
   const debt=num(d.debt_to_equity), current=num(d.current_ratio), fcf=num(d.free_cash_flow), vol=num(d.volatility);
@@ -98,7 +128,7 @@ function analyze(d, macro) {
   return { categories,total,grade,recommendation,confidence,fairValue:fv,mos,strengths:strengths.length?strengths:["No category reached the high-conviction threshold."],weaknesses:weaknesses.length?weaknesses:["No category fell below the risk threshold."],risks,thesis:`${d.company_name||d.ticker} scores ${total.toFixed(1)}/100 for a ${HORIZON} holding period. The model emphasizes valuation, durable growth, competitive advantage, execution quality, market sentiment, and long-term macro conditions. Recommendation: ${recommendation}. This is a screening opinion, not personalized financial advice.`};
 }
 
-const SAMPLE={ticker:"SAMPLE",company_name:"Sample Compounder Inc.",sector:"Technology",industry:"Software",current_price:145,market_cap:120000000000,trailing_pe:24,forward_pe:20,peg:1.35,price_to_sales:5.2,price_to_book:7.8,enterprise_to_ebitda:17,free_cash_flow:6500000000,enterprise_value:128000000000,ev_to_fcf:19.69,revenue_growth:.13,earnings_growth:.16,gross_margin:.68,operating_margin:.27,profit_margin:.21,roe:.24,debt_to_equity:42,current_ratio:1.65,dividend_growth:.08,short_percent_float:.025,held_percent_institutions:.72,held_percent_insiders:.055,recommendation_mean:1.9,target_mean_price:170,beta:1.05,price_5y_cagr:.14,volatility:.29,analyst_count:28,currency:"USD"};
+const SAMPLE={ticker:"SAMPLE",company_name:"Sample Compounder Inc.",sector:"Technology",industry:"Software - Infrastructure",business_summary:"A specialized enterprise software platform with a deeply integrated ecosystem.",current_price:145,market_cap:120000000000,trailing_pe:24,forward_pe:20,peg:1.35,price_to_sales:5.2,price_to_book:7.8,enterprise_to_ebitda:17,free_cash_flow:6500000000,enterprise_value:128000000000,ev_to_fcf:19.69,revenue_growth:.13,earnings_growth:.16,gross_margin:.68,operating_margin:.27,profit_margin:.21,roe:.24,debt_to_equity:42,current_ratio:1.65,dividend_growth:.08,short_percent_float:.025,held_percent_institutions:.72,held_percent_insiders:.055,recommendation_mean:1.9,target_mean_price:170,beta:1.05,price_5y_cagr:.14,volatility:.29,analyst_count:28,currency:"USD"};
 const initialMacro={industry:2,rates:1.5,cycle:2,regulation:1.5,currency:1,tailwinds:2};
 const money=(v)=>v===null||v===undefined?"N/A":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(v);
 const displayValue=(name,v)=>{if(v===null||v===undefined)return"N/A"; if(typeof v==="number"&&v>=-1&&v<=1&&/growth|margin|return|ownership|interest|upside|safety|resilience|tailwind|outlook/i.test(name))return`${(v*100).toFixed(1)}%`; return typeof v==="number"?v.toLocaleString("en-US",{maximumFractionDigits:2}):String(v)};
