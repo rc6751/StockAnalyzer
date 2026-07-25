@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Stock Analyzer",
-  description: "Company Score Card for 2+ Years",
+  description: "Company Score Card",
 };
 
 export default function RootLayout({ children }) {

@@ -145,7 +145,7 @@ export default function Home() {
                 color: "#e3efff",
               }}
             >
-              Company Score Card for 2+ Years
+              Company Score Card
             </p>
 
             <Link
