@@ -15,6 +15,36 @@ const text = (value) => {
   return String(value);
 };
 
+const yahooSession = async () => {
+  const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36";
+  const cookieResponse = await fetch("https://fc.yahoo.com", {
+    headers: { "User-Agent": userAgent, Accept: "text/html,*/*" },
+    cache: "no-store",
+    redirect: "manual",
+  });
+
+  const setCookie = cookieResponse.headers.get("set-cookie") || "";
+  const cookie = setCookie
+    .split(/,(?=[^;,]+=)/)
+    .map((part) => part.split(";")[0].trim())
+    .filter(Boolean)
+    .join("; ");
+
+  if (!cookie) throw new Error("Yahoo did not provide a session cookie.");
+
+  const crumbResponse = await fetch("https://query1.finance.yahoo.com/v1/test/getcrumb", {
+    headers: { "User-Agent": userAgent, Cookie: cookie, Accept: "text/plain" },
+    cache: "no-store",
+  });
+  if (!crumbResponse.ok) throw new Error(`Yahoo authentication returned ${crumbResponse.status}.`);
+
+  const crumb = (await crumbResponse.text()).trim();
+  if (!crumb || crumb.toLowerCase().includes("unauthorized")) {
+    throw new Error("Yahoo did not provide a valid authentication token.");
+  }
+  return { cookie, crumb, userAgent };
+};
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const ticker = (searchParams.get("ticker") || "").trim().toUpperCase();
@@ -31,16 +61,25 @@ export async function GET(request) {
       "assetProfile",
       "recommendationTrend",
     ].join(",");
-    const summaryUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}`;
-    const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=10y&interval=1d&events=history`;
+    const session = await yahooSession();
+    const summaryUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}&crumb=${encodeURIComponent(session.crumb)}`;
+    const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=10y&interval=1d&events=history&crumb=${encodeURIComponent(session.crumb)}`;
 
-    const headers = { "User-Agent": "Mozilla/5.0 StockAnalyzer/1.0", Accept: "application/json" };
+    const headers = {
+      "User-Agent": session.userAgent,
+      Cookie: session.cookie,
+      Accept: "application/json,text/plain,*/*",
+      Referer: `https://finance.yahoo.com/quote/${encodeURIComponent(ticker)}`,
+    };
     const [summaryResponse, chartResponse] = await Promise.all([
       fetch(summaryUrl, { headers, cache: "no-store" }),
       fetch(chartUrl, { headers, cache: "no-store" }),
     ]);
 
-    if (!summaryResponse.ok) throw new Error(`Yahoo Finance returned ${summaryResponse.status}`);
+    if (!summaryResponse.ok) {
+      const detail = await summaryResponse.text().catch(() => "");
+      throw new Error(`Yahoo Finance returned ${summaryResponse.status}${detail ? `: ${detail.slice(0, 120)}` : ""}`);
+    }
     const summaryJson = await summaryResponse.json();
     const root = summaryJson?.quoteSummary?.result?.[0];
     if (!root) throw new Error(summaryJson?.quoteSummary?.error?.description || "Ticker data was not found.");
