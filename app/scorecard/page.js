@@ -155,7 +155,7 @@ export default function ScorecardPage(){
     }catch(e){setScanStatus(x=>({...x,[market]:"Scan failed"}));alert(e.message||"Market scan failed.");}
   };
   const stopScan=market=>{cancelRef.current[market]=true};
-  const mainTabs=["Overview","Score Breakdown","Raw Metrics","Dow Top 10","NASDAQ Top 10","S&P Top 10"];
+  const mainTabs=["Overview","Dow Top 10","NASDAQ Top 10","S&P Top 10"];
   const marketForTab={"Dow Top 10":"dow","NASDAQ Top 10":"nasdaq","S&P Top 10":"sp500"};
   return <main style={{minHeight:"100vh",background:COLORS.bg,color:COLORS.text,fontFamily:"Arial, sans-serif"}}>
     <header style={{padding:"16px 18px 8px",display:"flex",alignItems:"baseline",gap:16,flexWrap:"wrap"}}><h1 style={{margin:0,fontSize:30}}>Long-Term Stock Analyzer</h1><span style={{color:COLORS.muted}}>Built for a {HORIZON} holding period</span><Link href="/" style={{marginLeft:"auto",color:COLORS.accent,fontWeight:700,textDecoration:"none"}}>Home</Link></header>
