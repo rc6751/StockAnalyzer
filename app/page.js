@@ -100,7 +100,7 @@ export default function Home() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {positive ? "▲" : "▼"} {market.pointChange} ({market.change})
+                    {positive ? "▲" : "▼"} {market.pointChange}
                   </div>
                 </article>
               );
