@@ -1,158 +1,125 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-const markets = [
-  { name: "S&P 500", direction: "up" },
-  { name: "Nasdaq", direction: "up" },
-  { name: "Dow", direction: "down" },
-  { name: "Russell 2000", direction: "up" },
-  { name: "VIX", direction: "down" },
-  { name: "Bitcoin", direction: "up" },
-  { name: "Gold", direction: "down" },
-  { name: "Oil", direction: "up" },
-];
+const HORIZON = "2+ years";
+const CAPS = { Valuation: 20, Growth: 20, Moat: 20, "Execution Risk": 10, Sentiment: 10, Macro: 20 };
+const COLORS = { bg: "#10131A", panel: "#181D27", panel2: "#222938", text: "#F2F5FA", muted: "#AAB4C3", accent: "#4EA1FF", good: "#35C48D", warn: "#F6B94A", bad: "#F06A6A" };
 
-export default function ScorecardPage() {
-  const [activeTab, setActiveTab] = useState("scorecard");
+const clamp = (v, low, high) => Math.max(low, Math.min(high, v));
+const num = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
+const round = (v) => Math.round(v * 100) / 100;
+const lowerBetter = (value, tiers, max) => {
+  value = num(value); if (value === null || value <= 0) return 0;
+  for (const [threshold, fraction] of tiers) if (value <= threshold) return round(max * fraction);
+  return 0;
+};
+const growthPoints = (value, max) => {
+  value = num(value); if (value === null) return 0;
+  if (value >= .20) return max; if (value >= .15) return max * .9; if (value >= .10) return max * .75;
+  if (value >= .05) return max * .5; if (value > 0) return max * .25; return 0;
+};
+const qualityPoints = (value, thresholds, max) => {
+  value = num(value); if (value === null) return 0;
+  for (const [threshold, fraction] of thresholds) if (value >= threshold) return round(max * fraction);
+  return 0;
+};
+const metric = (name, value, points, max, explanation) => ({ name, value, points: round(points), max, explanation });
+const category = (name, metrics, max) => ({ name, metrics, max, score: round(metrics.reduce((s, m) => s + m.points, 0)) });
 
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        fontFamily: "Arial, sans-serif",
-        background: "#eef3f9",
-        color: "#0b1f3a",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          gap: "12px",
-          overflowX: "auto",
-          padding: "14px",
-          background: "#03142d",
-        }}
-      >
-        {markets.map((market) => (
-          <div
-            key={market.name}
-            style={{
-              background: "#ffffff",
-              color: market.direction === "up" ? "#008a2e" : "#c00000",
-              padding: "11px 18px",
-              borderRadius: "8px",
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              boxShadow: "0 3px 10px rgba(0,0,0,0.22)",
-            }}
-          >
-            {market.name}
-          </div>
-        ))}
-      </div>
-
-      <header
-        style={{
-          background: "#0b2d5c",
-          color: "#ffffff",
-          padding: "22px 24px",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1180px",
-            margin: "0 auto",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "20px",
-            flexWrap: "wrap",
-          }}
-        >
-          <h1 style={{ margin: 0, fontSize: "32px" }}>Stock Analyzer</h1>
-          <Link
-            href="/"
-            style={{
-              color: "#ffffff",
-              textDecoration: "none",
-              fontWeight: 700,
-            }}
-          >
-            Home
-          </Link>
-        </div>
-      </header>
-
-      <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "26px 20px" }}>
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            borderBottom: "2px solid #c9d5e5",
-            marginBottom: "24px",
-          }}
-        >
-          <button
-            onClick={() => setActiveTab("scorecard")}
-            style={{
-              border: "none",
-              cursor: "pointer",
-              padding: "14px 22px",
-              fontSize: "17px",
-              fontWeight: 800,
-              borderRadius: "8px 8px 0 0",
-              background: activeTab === "scorecard" ? "#0b2d5c" : "#dbe5f2",
-              color: activeTab === "scorecard" ? "#ffffff" : "#0b2d5c",
-            }}
-          >
-            Stock Scorecard
-          </button>
-
-          <button
-            onClick={() => setActiveTab("top10")}
-            style={{
-              border: "none",
-              cursor: "pointer",
-              padding: "14px 22px",
-              fontSize: "17px",
-              fontWeight: 800,
-              borderRadius: "8px 8px 0 0",
-              background: activeTab === "top10" ? "#0b2d5c" : "#dbe5f2",
-              color: activeTab === "top10" ? "#ffffff" : "#0b2d5c",
-            }}
-          >
-            Top 10
-          </button>
-        </div>
-
-        <section
-          style={{
-            background: "#ffffff",
-            borderRadius: "12px",
-            padding: "30px",
-            minHeight: "360px",
-            boxShadow: "0 8px 24px rgba(20,45,80,0.12)",
-          }}
-        >
-          {activeTab === "scorecard" ? (
-            <>
-              <h2 style={{ marginTop: 0, fontSize: "30px" }}>Stock Scorecard</h2>
-              <p style={{ fontSize: "18px", lineHeight: 1.6 }}>
-                The stock analysis scorecard will be built here.
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 style={{ marginTop: 0, fontSize: "30px" }}>Top 10</h2>
-              <p style={{ fontSize: "18px", lineHeight: 1.6 }}>
-                Your ten highest-scoring stocks will be generated here.
-              </p>
-            </>
-          )}
-        </section>
-      </div>
-    </main>
-  );
+function fairValue(d) {
+  const price = num(d.current_price), pe = num(d.forward_pe) ?? num(d.trailing_pe), growth = num(d.earnings_growth), target = num(d.target_mean_price);
+  const estimates = [];
+  if (price && pe && pe > 0) {
+    const eps = price / pe, growthPct = clamp((growth ?? .08) * 100, 5, 20), justifiedPe = clamp(10 + growthPct * .75, 12, 25);
+    estimates.push(eps * justifiedPe);
+  }
+  if (target && target > 0) estimates.push(target);
+  return estimates.length ? estimates.reduce((a, b) => a + b, 0) / estimates.length : null;
 }
+function analyze(d, macro) {
+  let items = [];
+  const pe = num(d.forward_pe) ?? num(d.trailing_pe);
+  items.push(metric("P/E and Forward P/E", pe, lowerBetter(pe, [[12,1],[18,.85],[25,.6],[35,.3]],4),4,"Lower positive earnings multiples receive more points."));
+  items.push(metric("PEG Ratio", d.peg, lowerBetter(d.peg, [[1,1],[1.5,.8],[2,.55],[3,.25]],3),3,"Rewards growth purchased at a reasonable multiple."));
+  items.push(metric("EV / Free Cash Flow", d.ev_to_fcf, lowerBetter(d.ev_to_fcf, [[15,1],[22,.75],[30,.45],[40,.2]],4),4,"Cash-flow valuation is favored over accounting earnings alone."));
+  items.push(metric("EV / EBITDA", d.enterprise_to_ebitda, lowerBetter(d.enterprise_to_ebitda, [[10,1],[15,.75],[22,.4],[30,.2]],3),3,"Lower enterprise-value multiples score better."));
+  const fv = fairValue(d), price = num(d.current_price), mos = !fv || !price ? null : (fv-price)/fv;
+  const mosPoints = mos === null ? 0 : mos >= .30 ? 4 : mos >= .15 ? 3.25 : mos >= 0 ? 2 : mos >= -.15 ? 1 : 0;
+  items.push(metric("Fair Value Margin of Safety", mos, mosPoints,4,"A larger discount to estimated fair value earns more points."));
+  const candidates = [num(d.price_to_sales), num(d.price_to_book)].filter((x) => x && x > 0), candidate = candidates.length ? Math.min(...candidates) : null;
+  items.push(metric("Price / Sales or Price / Book", candidate, lowerBetter(candidate, [[2,1],[4,.75],[7,.4],[12,.2]],2),2,"Uses the more favorable available asset or sales multiple."));
+  const categories = [category("Valuation", items, 20)];
+
+  const revenue = num(d.revenue_growth), earnings = num(d.earnings_growth), knownGrowth = [revenue, earnings].filter((x) => x !== null);
+  const fcfProxy = knownGrowth.length ? knownGrowth.reduce((a,b)=>a+b,0)/knownGrowth.length : null;
+  const positive = [revenue, earnings, fcfProxy].filter((x)=>x !== null && x > 0).length, known = [revenue, earnings, fcfProxy].filter((x)=>x !== null).length;
+  items = [
+    metric("Revenue Growth", revenue, growthPoints(revenue,5),5,"Sustained top-line growth supports long-term compounding."),
+    metric("EPS Growth", earnings, growthPoints(earnings,5),5,"Earnings growth is weighted heavily for a 2+ year hold."),
+    metric("Free Cash Flow Growth Proxy", fcfProxy, growthPoints(fcfProxy,4),4,"Uses available revenue and earnings growth as a conservative cash-flow proxy."),
+    metric("Long-Term Market Compounding", d.price_5y_cagr, growthPoints(d.price_5y_cagr,2),2,"Five-year price CAGR is a supporting, not dominant, signal."),
+    metric("Dividend Growth", d.dividend_growth, growthPoints(d.dividend_growth,2),2,"Dividend growers receive credit; non-payers are not automatically penalized beyond this item."),
+    metric("Growth Consistency", known ? positive/known : null, known ? 2*positive/known : 0,2,"Rewards multiple growth measures moving in the same positive direction."),
+  ]; categories.push(category("Growth", items,20));
+
+  const roe=num(d.roe), gross=num(d.gross_margin), operating=num(d.operating_margin), profit=num(d.profit_margin), institutions=num(d.held_percent_institutions);
+  const margins=[gross,profit].filter((x)=>x!==null), blended=margins.length?margins.reduce((a,b)=>a+b,0)/margins.length:null;
+  items=[
+    metric("Return on Equity",roe,qualityPoints(roe,[[.25,1],[.18,.8],[.12,.55],[.08,.3]],4),4,"Persistently strong returns suggest pricing power or capital efficiency."),
+    metric("Operating Margin",operating,qualityPoints(operating,[[.30,1],[.20,.8],[.12,.55],[.07,.3]],4),4,"High operating margins may indicate differentiation or scale advantages."),
+    metric("Margin Strength",blended,qualityPoints(blended,[[.40,1],[.25,.8],[.15,.55],[.08,.3]],4),4,"Blends gross and net profitability as a durability proxy."),
+    metric("Competitive Advantage Consistency",null,(revenue!==null&&revenue>0?2:0)+(earnings!==null&&earnings>0?2:0),4,"Positive revenue and earnings trends support evidence of durable demand."),
+    metric("Market Leadership Proxy",institutions,qualityPoints(institutions,[[.75,1],[.55,.75],[.35,.5],[.15,.25]],4),4,"Institutional sponsorship is used only as a limited proxy for business credibility."),
+  ]; categories.push(category("Moat",items,20));
+
+  const debt=num(d.debt_to_equity), current=num(d.current_ratio), fcf=num(d.free_cash_flow), vol=num(d.volatility);
+  const debtPts=debt===null?0:debt<=50?2.5:debt<=100?2:debt<=175?1:0, currentPts=current===null?0:current>=1.5?2:current>=1?1.25:current>=.75?.5:0;
+  const volPts=vol===null?0:vol<=.25?1.5:vol<=.40?1:vol<=.60?.5:0;
+  items=[metric("Debt Discipline",debt,debtPts,2.5,"Lower debt relative to equity reduces execution risk."),metric("Liquidity",current,currentPts,2,"A stronger current ratio provides operating flexibility."),metric("Free Cash Flow Execution",fcf,fcf!==null&&fcf>0?2:0,2,"Positive free cash flow supports self-funded execution."),metric("Earnings Execution",earnings,earnings!==null&&earnings>0?2:earnings!==null&&earnings>-.05?1:0,2,"Positive earnings momentum earns full credit."),metric("Business / Market Stability Proxy",vol,volPts,1.5,"Lower long-term volatility earns modest risk-control credit.")];
+  categories.push(category("Execution Risk",items,10));
+
+  const rec=num(d.recommendation_mean), target=num(d.target_mean_price), insiders=num(d.held_percent_insiders), shortFloat=num(d.short_percent_float), upside=!target||!price?null:(target-price)/price;
+  const recPts=rec===null?0:rec<=1.8?2:rec<=2.3?1.5:rec<=3?1:rec<=3.5?.5:0, upPts=upside===null?0:upside>=.25?2:upside>=.10?1.5:upside>=0?1:upside>=-.10?.5:0;
+  const shortPts=shortFloat===null?0:shortFloat<=.03?2:shortFloat<=.07?1.5:shortFloat<=.12?.75:0;
+  items=[metric("Analyst Consensus",rec,recPts,2,"Lower recommendation means generally indicate stronger analyst sentiment."),metric("Analyst Target Upside",upside,upPts,2,"Consensus target upside is capped to avoid dominating fundamentals."),metric("Institutional Ownership",institutions,qualityPoints(institutions,[[.75,1],[.50,.75],[.30,.5],[.10,.25]],2),2,"Institutional sponsorship can support liquidity and market confidence."),metric("Insider Alignment",insiders,qualityPoints(insiders,[[.10,1],[.05,.75],[.02,.5],[.005,.25]],2),2,"Meaningful insider ownership can align management with shareholders."),metric("Short Interest",shortFloat,shortPts,2,"Lower short interest earns more points.")];
+  categories.push(category("Sentiment",items,10));
+
+  items=[metric("Industry Growth Outlook",macro.industry,macro.industry,4,"User assessment of the industry's 2+ year growth runway."),metric("Interest Rate Resilience",macro.rates,macro.rates,3,"Higher scores indicate lower sensitivity to financing costs."),metric("Economic Cycle Resilience",macro.cycle,macro.cycle,4,"Rewards demand that can persist through recessions."),metric("Geopolitical / Regulatory Resilience",macro.regulation,macro.regulation,3,"Higher scores indicate lower structural policy and geopolitical risk."),metric("Currency / Commodity Resilience",macro.currency,macro.currency,2,"Rewards limited exposure or strong hedging ability."),metric("Long-Term Secular Tailwinds",macro.tailwinds,macro.tailwinds,4,"Rewards durable multi-year demand drivers.")];
+  categories.push(category("Macro",items,20));
+
+  const total=round(categories.reduce((s,c)=>s+c.score,0));
+  const grade=total>=92?"A+":total>=87?"A":total>=82?"A-":total>=77?"B+":total>=72?"B":total>=67?"B-":total>=62?"C+":total>=57?"C":total>=52?"C-":total>=45?"D":"F";
+  const recommendation=total>=80&&mos!==null&&mos>=.15?"STRONG BUY":total>=72&&(mos===null||mos>=0)?"BUY":total>=58?"HOLD / WATCH":total>=45?"CAUTION":"AVOID";
+  const metricValues=categories.filter(c=>c.name!=="Macro").flatMap(c=>c.metrics.map(m=>m.value)), available=metricValues.filter(v=>v!==null&&v!==undefined).length, pct=available/Math.max(metricValues.length,1), confidence=pct>=.85?"High":pct>=.65?"Moderate":"Low";
+  const strengths=categories.filter(c=>c.score/c.max>=.75).map(c=>`${c.name}: ${c.score.toFixed(1)}/${c.max}`), weaknesses=categories.filter(c=>c.score/c.max<.45).map(c=>`${c.name}: ${c.score.toFixed(1)}/${c.max}`);
+  const risks=[]; if(debt!==null&&debt>150)risks.push("Elevated debt-to-equity may reduce flexibility during a downturn."); if(shortFloat!==null&&shortFloat>.10)risks.push("High short interest signals meaningful market skepticism."); if(revenue!==null&&revenue<0)risks.push("Revenue is currently contracting."); if(earnings!==null&&earnings<0)risks.push("Earnings momentum is negative."); if(mos!==null&&mos<-.15)risks.push("Shares appear materially above the model's fair-value estimate."); if(!risks.length)risks.push("No single quantitative red flag dominates, but qualitative company-specific risks still require review.");
+  return { categories,total,grade,recommendation,confidence,fairValue:fv,mos,strengths:strengths.length?strengths:["No category reached the high-conviction threshold."],weaknesses:weaknesses.length?weaknesses:["No category fell below the risk threshold."],risks,thesis:`${d.company_name||d.ticker} scores ${total.toFixed(1)}/100 for a ${HORIZON} holding period. The model emphasizes valuation, durable growth, competitive advantage, execution quality, market sentiment, and long-term macro conditions. Recommendation: ${recommendation}. This is a screening opinion, not personalized financial advice.`};
+}
+
+const SAMPLE={ticker:"SAMPLE",company_name:"Sample Compounder Inc.",sector:"Technology",industry:"Software",current_price:145,market_cap:120000000000,trailing_pe:24,forward_pe:20,peg:1.35,price_to_sales:5.2,price_to_book:7.8,enterprise_to_ebitda:17,free_cash_flow:6500000000,enterprise_value:128000000000,ev_to_fcf:19.69,revenue_growth:.13,earnings_growth:.16,gross_margin:.68,operating_margin:.27,profit_margin:.21,roe:.24,debt_to_equity:42,current_ratio:1.65,dividend_growth:.08,short_percent_float:.025,held_percent_institutions:.72,held_percent_insiders:.055,recommendation_mean:1.9,target_mean_price:170,beta:1.05,price_5y_cagr:.14,volatility:.29,analyst_count:28,currency:"USD"};
+const initialMacro={industry:2,rates:1.5,cycle:2,regulation:1.5,currency:1,tailwinds:2};
+const money=(v)=>v===null||v===undefined?"N/A":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(v);
+const displayValue=(name,v)=>{if(v===null||v===undefined)return"N/A"; if(typeof v==="number"&&v>=-1&&v<=1&&/growth|margin|return|ownership|interest|upside|safety|resilience|tailwind|outlook/i.test(name))return`${(v*100).toFixed(1)}%`; return typeof v==="number"?v.toLocaleString("en-US",{maximumFractionDigits:2}):String(v)};
+
+export default function ScorecardPage(){
+  const [ticker,setTicker]=useState("AAPL"),[data,setData]=useState(null),[macro,setMacro]=useState(initialMacro),[status,setStatus]=useState("Ready"),[tab,setTab]=useState("Overview"),[loading,setLoading]=useState(false);
+  const result=useMemo(()=>data?analyze(data,macro):null,[data,macro]);
+  const run=async()=>{const symbol=ticker.trim().toUpperCase();if(!symbol)return;setLoading(true);setStatus("Loading market data…");try{const r=await fetch(`/api/stock?ticker=${encodeURIComponent(symbol)}`);const j=await r.json();if(!r.ok)throw new Error(j.error||"Data load failed");setData(j);setStatus("Analysis complete");}catch(e){setStatus("Data load failed");alert(`Could not load ${symbol}.\n\n${e.message}\n\nUse Load Sample to test the scoring engine.`);}finally{setLoading(false)}};
+  const exportReport=()=>{if(!result)return alert("Run an analysis first.");const payload={...result,ticker:data.ticker,company_name:data.company_name,horizon:HORIZON,generated_at:new Date().toISOString(),raw_metrics:data};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${data.ticker}_long_term_analysis.json`;a.click();URL.revokeObjectURL(url)};
+  return <main style={{minHeight:"100vh",background:COLORS.bg,color:COLORS.text,fontFamily:"Arial, sans-serif"}}>
+    <header style={{padding:"16px 18px 8px",display:"flex",alignItems:"baseline",gap:16,flexWrap:"wrap"}}><h1 style={{margin:0,fontSize:30}}>Long-Term Stock Analyzer</h1><span style={{color:COLORS.muted}}>Built for a {HORIZON} holding period</span><Link href="/" style={{marginLeft:"auto",color:COLORS.accent,fontWeight:700,textDecoration:"none"}}>Home</Link></header>
+    <section style={{margin:"8px 18px",padding:14,background:COLORS.panel,borderRadius:8,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><strong>Ticker</strong><input value={ticker} onChange={e=>setTicker(e.target.value)} onKeyDown={e=>e.key==="Enter"&&run()} style={{width:130,padding:"9px 10px",fontSize:18,fontWeight:700,background:COLORS.panel2,color:COLORS.text,border:"1px solid #354055",borderRadius:5}}/><button onClick={run} disabled={loading} style={{...buttonStyle,background:COLORS.accent}}>{loading?"Analyzing…":"Analyze"}</button><button onClick={()=>{setData(SAMPLE);setTicker("SAMPLE");setStatus("Sample loaded")}} style={buttonStyle}>Load Sample</button><span style={{marginLeft:"auto",fontWeight:700}}>{status}</span><button onClick={exportReport} style={buttonStyle}>Export Report</button></section>
+    <div style={{display:"grid",gridTemplateColumns:"minmax(260px,300px) minmax(0,1fr)",gap:10,padding:"4px 18px 18px"}}>
+      <aside style={{background:COLORS.panel,padding:14,borderRadius:8}}><h3 style={{margin:"0 0 5px"}}>Macro Assessment (20 pts)</h3><p style={{color:COLORS.muted,margin:"0 0 14px"}}>Rate each factor for the next 2+ years.</p>{[["industry","Industry growth",4],["rates","Rate resilience",3],["cycle","Cycle resilience",4],["regulation","Regulatory resilience",3],["currency","Currency / commodity",2],["tailwinds","Secular tailwinds",4]].map(([key,label,max])=><div key={key} style={{marginBottom:14}}><div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:14}}><span>{label} (0–{max})</span><span>{macro[key].toFixed(1)}</span></div><input type="range" min="0" max={max} step="0.5" value={macro[key]} onChange={e=>setMacro({...macro,[key]:Number(e.target.value)})} style={{width:"100%"}}/></div>)}<hr style={{borderColor:"#303848"}}/><h3>Scoring Caps</h3>{Object.entries(CAPS).map(([name,cap])=><div key={name} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontWeight:700}}><span>{name}</span><span>{cap}</span></div>)}</aside>
+      <section style={{minWidth:0}}><div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(120px,1fr))",gap:10,marginBottom:10}}>{[["Total Score",result?`${result.total.toFixed(1)}/100`:"—"],["Grade",result?.grade||"—"],["Long-Term View",result?.recommendation||"—"],["Current Price",data?money(data.current_price):"—"],["Fair Value",result?money(result.fairValue):"—"]].map(([title,value],i)=><div key={title} style={{background:COLORS.panel,padding:14,textAlign:"center",borderRadius:8,minHeight:78}}><div style={{fontWeight:700}}>{title}</div><div style={{fontSize:i===0?28:18,fontWeight:800,color:i===0?COLORS.accent:COLORS.text,marginTop:10}}>{value}</div></div>)}</div>
+      <div style={{display:"flex",background:COLORS.panel2,borderRadius:"8px 8px 0 0",overflow:"hidden"}}>{["Overview","Score Breakdown","Raw Metrics"].map(t=><button key={t} onClick={()=>setTab(t)} style={{...buttonStyle,borderRadius:0,background:tab===t?COLORS.accent:COLORS.panel2,padding:"11px 16px"}}>{t}</button>)}</div>
+      <div style={{background:COLORS.panel,minHeight:480,padding:16,borderRadius:"0 0 8px 8px",overflow:"auto"}}>{!result?<p>Run an analysis or load the sample company.</p>:tab==="Overview"?<Overview data={data} result={result}/>:tab==="Score Breakdown"?<Breakdown result={result}/>:<pre style={{whiteSpace:"pre-wrap",fontFamily:"Courier New",fontSize:13}}>{JSON.stringify(data,null,2)}</pre>}</div></section>
+    </div><style jsx global>{`@media(max-width:900px){main>div{grid-template-columns:1fr!important} section>div:first-child{grid-template-columns:repeat(2,minmax(130px,1fr))!important}} button:hover{filter:brightness(1.08)} input[type=range]{accent-color:${COLORS.accent}}`}</style>
+  </main>
+}
+const buttonStyle={border:0,cursor:"pointer",padding:"9px 13px",fontSize:14,fontWeight:800,borderRadius:5,background:"#30394A",color:"white"};
+function Overview({data,result}){const mos=result.mos===null?"N/A":`${(result.mos*100).toFixed(1)}%`;return <div style={{lineHeight:1.6}}><h2 style={{marginTop:0}}>{data.company_name} ({data.ticker})</h2><div>Generated: {new Date().toLocaleString()}</div><div>Investment horizon: {HORIZON}</div><div>Model confidence: {result.confidence}</div><h3>TOTAL SCORE: {result.total.toFixed(1)}/100 &nbsp; | &nbsp; GRADE: {result.grade} &nbsp; | &nbsp; VIEW: {result.recommendation}</h3><div>Current price: {money(data.current_price)}</div><div>Estimated fair value: {money(result.fairValue)}</div><div>Margin of safety: {mos}</div><h3>CATEGORY SCORES</h3>{result.categories.map(c=><div key={c.name}>• {c.name}: {c.score.toFixed(1)}/{c.max}</div>)}<h3>STRENGTHS</h3>{result.strengths.map(x=><div key={x}>• {x}</div>)}<h3>WEAKNESSES</h3>{result.weaknesses.map(x=><div key={x}>• {x}</div>)}<h3>KEY RISKS</h3>{result.risks.map(x=><div key={x}>• {x}</div>)}<h3>LONG-TERM THESIS</h3><p>{result.thesis}</p></div>}
+function Breakdown({result}){return <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:850}}><thead><tr>{["Category","Metric","Value","Points","Max","Why"].map(h=><th key={h} style={cell(true)}>{h}</th>)}</tr></thead><tbody>{result.categories.flatMap(c=>c.metrics.map(m=><tr key={`${c.name}-${m.name}`}><td style={cell()}>{c.name}</td><td style={cell()}>{m.name}</td><td style={cell()}>{displayValue(m.name,m.value)}</td><td style={cell()}>{m.points.toFixed(2)}</td><td style={cell()}>{m.max}</td><td style={cell()}>{m.explanation}</td></tr>))}</tbody></table></div>}
+const cell=(head=false)=>({padding:"9px",borderBottom:"1px solid #303848",textAlign:"left",background:head?COLORS.panel2:"transparent",fontWeight:head?800:400,verticalAlign:"top"});
