@@ -154,8 +154,8 @@ export default function ScorecardPage(){
     }catch(e){setScanStatus(x=>({...x,[market]:"Scan failed"}));alert(e.message||"Market scan failed.");}
   };
   const stopScan=market=>{cancelRef.current[market]=true};
-  const mainTabs=["Overview"];
-  const marketForTab={};
+  const mainTabs=["Overview","Dow Top 10","NASDAQ Top 10","S&P Top 10"];
+  const marketForTab={"Dow Top 10":"dow","NASDAQ Top 10":"nasdaq","S&P Top 10":"sp500"};
   return <main style={{minHeight:"100vh",background:COLORS.bg,color:COLORS.text,fontFamily:"Arial, sans-serif"}}>
     <header style={{padding:"16px 18px 8px",display:"flex",alignItems:"baseline",gap:16,flexWrap:"wrap"}}><h1 style={{margin:0,fontSize:30}}>Stock Analyzer</h1><span style={{color:COLORS.muted}}>Investment scorecard</span><Link href="/" style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:112,padding:"12px 22px",background:"#FFFFFF",color:"#000000",fontSize:17,fontWeight:800,textDecoration:"none",borderRadius:8,boxShadow:"0 4px 12px rgba(0,0,0,.22)"}}>Home</Link></header>
     <section style={{margin:"8px 18px",padding:14,background:COLORS.panel,borderRadius:8,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><strong>Ticker</strong><input value={ticker} onChange={e=>setTicker(e.target.value)} onKeyDown={e=>e.key==="Enter"&&run()} style={{width:130,padding:"9px 10px",fontSize:18,fontWeight:700,background:COLORS.panel2,color:COLORS.text,border:"1px solid #354055",borderRadius:5}}/><button onClick={()=>run()} disabled={loading} style={{...buttonStyle,background:COLORS.accent}}>{loading?"Analyzing…":"Analyze"}</button><span style={{marginLeft:"auto",fontWeight:700}}>{status}</span><button onClick={exportReport} style={buttonStyle}>Export Report</button></section>
