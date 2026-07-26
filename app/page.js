@@ -1,17 +1,35 @@
-import Link from "next/link";
+"use client";
 
-const markets = [
-  { name: "Dow", symbol: "DJI", amount: "44,901.12", pointChange: "-80.97", change: "-0.18%", direction: "down" },
-  { name: "Nasdaq", symbol: "IXIC", amount: "21,108.32", pointChange: "+148.67", change: "+0.71%", direction: "up" },
-  { name: "S&P 500", symbol: "SPX", amount: "6,388.64", pointChange: "+26.73", change: "+0.42%", direction: "up" },
-  { name: "VIX", symbol: "VIX", amount: "15.36", pointChange: "-0.18", change: "-1.16%", direction: "down" },
-  { name: "Bitcoin", symbol: "BTC", amount: "$118,420.00", pointChange: "+$976.00", change: "+0.83%", direction: "up" },
-  { name: "ETHU", symbol: "ETHU", amount: "$43.76", pointChange: "+$0.54", change: "+1.24%", direction: "up" },
-  { name: "Gold", symbol: "GC", amount: "$3,336.70", pointChange: "-$3.10", change: "-0.09%", direction: "down" },
-  { name: "Oil", symbol: "WTI", amount: "$65.16", pointChange: "+$0.23", change: "+0.36%", direction: "up" },
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+const marketDefinitions = [
+  { name: "Dow", symbol: "^DJI" },
+  { name: "Nasdaq", symbol: "^IXIC" },
+  { name: "S&P 500", symbol: "^GSPC" },
+  { name: "VIX", symbol: "^VIX" },
+  { name: "Bitcoin", symbol: "BTC-USD" },
+  { name: "Ethereum", symbol: "ETH-USD" },
+  { name: "Gold", symbol: "GC=F" },
+  { name: "Oil", symbol: "CL=F" },
 ];
 
 export default function Home() {
+  const [markets, setMarkets] = useState(marketDefinitions.map((m) => ({ ...m, amount: "Loading...", pointChange: "", direction: "up" })));
+
+  useEffect(() => {
+    Promise.all(marketDefinitions.map(async (m) => {
+      try {
+        const r = await fetch(`/api/stock?ticker=${encodeURIComponent(m.symbol)}`, { cache: "no-store" });
+        const d = await r.json();
+        const price = Number(d.current_price);
+        return { ...m, amount: Number.isFinite(price) ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "N/A", pointChange: "Live", direction: "up" };
+      } catch {
+        return { ...m, amount: "N/A", pointChange: "", direction: "down" };
+      }
+    })).then(setMarkets);
+  }, []);
+
   return (
     <main
       style={{
