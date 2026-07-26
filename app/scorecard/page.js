@@ -259,12 +259,73 @@ export default function ScorecardPage(){
     <section style={{margin:"8px 18px",padding:14,background:COLORS.panel,borderRadius:8,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><strong>Ticker</strong><input value={ticker} onChange={e=>setTicker(e.target.value)} onKeyDown={e=>e.key==="Enter"&&run()} style={{width:130,padding:"9px 10px",fontSize:18,fontWeight:700,background:COLORS.panel2,color:COLORS.text,border:"1px solid #354055",borderRadius:5}}/><button onClick={()=>run()} disabled={loading} style={{...buttonStyle,background:COLORS.accent}}>{loading?"Analyzing…":"Analyze"}</button></section>
     <div style={{display:"grid",gridTemplateColumns:"minmax(260px,300px) minmax(0,1fr)",gap:10,padding:"4px 18px 18px"}}>
       <aside style={{background:COLORS.panel,padding:14,borderRadius:8}}><h3 style={{margin:"0 0 14px"}}>Stock Score Breakdown</h3>{CAPS&&Object.entries(CAPS).map(([name,max])=>{const categoryScore=result?.categories.find(c=>c.name===name)?.score??0;const pct=Math.max(0,Math.min(100,(categoryScore/max)*100));return <div key={name} style={{marginBottom:16}}><div style={{display:"grid",gridTemplateColumns:"minmax(105px,1fr) auto",gap:10,alignItems:"center",marginBottom:6,fontWeight:700,fontSize:14}}><span>{name} {result?categoryScore.toFixed(1):"—"}</span><span></span></div><div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 28px",gap:9,alignItems:"center"}}><div role="progressbar" aria-label={`${name} score`} aria-valuemin="0" aria-valuemax={max} aria-valuenow={result?categoryScore:0} style={{height:10,background:COLORS.panel2,borderRadius:20,overflow:"hidden"}}><div style={{height:"100%",width:`${result?pct:0}%`,background:COLORS.accent,borderRadius:20}}/></div><span style={{fontWeight:800,textAlign:"right"}}>{max}</span></div></div>})}</aside>
-      <section style={{minWidth:0}}><div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(120px,1fr))",gap:10,marginBottom:10}}>{[["Total Score",result?`${result.total.toFixed(1)}/100`:"—"],["Grade",result?.grade||"—"],["View",result?.recommendation||"—"],["Current Price",data?money(data.current_price):"—"],["Fair Value",result?money(result.fairValue):"—"]].map(([title,value],i)=><div key={title} style={{background:COLORS.panel,padding:14,textAlign:"center",borderRadius:8,minHeight:78}}><div style={{fontWeight:700}}>{title}</div><div style={{fontSize:i===0?28:18,fontWeight:800,color:i===0?COLORS.accent:COLORS.text,marginTop:10}}>{value}</div></div>)}</div>
-      <div style={{display:"flex",background:COLORS.panel2,borderRadius:"8px 8px 0 0",overflowX:"auto"}}>{mainTabs.map(t=><button key={t} onClick={()=>setTab(t)} style={{...buttonStyle,borderRadius:0,background:tab===t?COLORS.accent:COLORS.panel2,padding:"11px 16px",whiteSpace:"nowrap"}}>{t}</button>)}</div>
-      <div style={{background:COLORS.panel,minHeight:480,padding:16,borderRadius:"0 0 8px 8px",overflow:"auto"}}>{marketForTab[tab]?<TopTen market={marketForTab[tab]} rows={rankings[marketForTab[tab]]||[]} status={scanStatus[marketForTab[tab]]} progress={scanProgress[marketForTab[tab]]} updated={scanUpdated[marketForTab[tab]]} onScan={scanMarket} onStop={stopScan} onOpen={run}/>:!result?<p>Run an analysis to view the scorecard.</p>:tab==="Overview"?<Overview data={data} result={result}/>:tab==="Score Breakdown"?<Breakdown result={result}/>:<pre style={{whiteSpace:"pre-wrap",fontFamily:"Courier New",fontSize:13}}>{JSON.stringify(data,null,2)}</pre>}</div></section>
-    </div><style jsx global>{`@media(max-width:900px){main>div{grid-template-columns:1fr!important} section>div:first-child{grid-template-columns:repeat(2,minmax(130px,1fr))!important}} button:hover{filter:brightness(1.08)} button:disabled{opacity:.55;cursor:not-allowed} input[type=range]{accent-color:${COLORS.accent}}`}</style>
+      <section style={{minWidth:0}}>{data&&result?<ValuationMeter data={data} result={result}/>:<div style={{height:"100%",minHeight:520,background:COLORS.panel,border:"1px solid #2E3A4D",borderRadius:14,display:"grid",placeItems:"center",color:COLORS.muted,fontSize:18,fontWeight:700}}>Analyze a ticker to display the valuation meter.</div>}</section>
+    </div><style jsx global>{`@media(max-width:1100px){.meterTop{grid-template-columns:1fr!important}.meterStats{grid-template-columns:repeat(2,minmax(150px,1fr))!important}.meterStats>div{border-left:none!important;border-top:1px solid #314155;padding:16px 22px!important}} @media(max-width:900px){main>div{grid-template-columns:1fr!important} section>div:first-child{grid-template-columns:repeat(2,minmax(130px,1fr))!important}} @media(max-width:620px){.meterStats{grid-template-columns:1fr!important}.meterTop>div:first-child{min-height:360px!important}} button:hover{filter:brightness(1.08)} button:disabled{opacity:.55;cursor:not-allowed} input[type=range]{accent-color:${COLORS.accent}}`}</style>
   </main>
 }
+function ValuationMeter({data,result}){
+  const score=clamp(Number(result.total)||0,0,100);
+  const angle=-180+(score/100)*180;
+  const fair=result.fairValue;
+  const upside=fair&&data.current_price?fair/data.current_price-1:null;
+  const pe=num(data.forward_pe)??num(data.trailing_pe);
+  const eps=data.current_price&&pe?data.current_price/pe:null;
+  const growth=num(data.earnings_growth);
+  const dividend=num(data.dividend_yield)??num(data.dividend_growth);
+  const signal=result.recommendation.replace(" / WATCH","");
+  const zone=score<20?"OVERVALUED":score<40?"SLIGHTLY OVERVALUED":score<60?"FAIR VALUE":score<80?"UNDERVALUED":"DEEP VALUE";
+  const zoneColor=score<20?"#ff1738":score<40?"#ff8a00":score<60?"#ffd500":"#45d12d";
+  const note=score<40?"Valuation looks stretched. Consider waiting for a better entry.":score<60?"Neutral valuation. Consider waiting for confirmation.":score<80?"Attractive valuation with a favorable risk/reward profile.":"Deep-value range with strong modeled upside.";
+  const analysis=pe===null?"N/A":pe<18?"Below Average":pe<25?"Near Average":pe<35?"Slightly Above":"Well Above";
+  const fmtPct=v=>v===null||v===undefined?"N/A":`${v>=0?"+":""}${(v*100).toFixed(1)}%`;
+  const polar=(cx,cy,r,a)=>{const rad=(a-90)*Math.PI/180;return {x:cx+r*Math.cos(rad),y:cy+r*Math.sin(rad)}};
+  const arc=(cx,cy,r,start,end)=>{const a=polar(cx,cy,r,end),b=polar(cx,cy,r,start);return `M ${a.x} ${a.y} A ${r} ${r} 0 ${end-start<=180?0:1} 0 ${b.x} ${b.y}`};
+  const ticks=Array.from({length:21},(_,i)=>i*5);
+  return <div style={{background:"linear-gradient(145deg,#07111e,#091522 55%,#07101b)",border:"1px solid #2a3b50",borderRadius:16,padding:20,boxShadow:"inset 0 0 45px rgba(0,0,0,.28)",minHeight:520}}>
+    <div style={{display:"grid",gridTemplateColumns:"minmax(420px,1.35fr) minmax(300px,.9fr)",gap:22,alignItems:"center"}} className="meterTop">
+      <div style={{position:"relative",minHeight:430}}>
+        <svg viewBox="0 0 700 430" role="img" aria-label={`Valuation score ${score.toFixed(1)} out of 100`} style={{width:"100%",height:"auto",overflow:"visible"}}>
+          <defs><filter id="needleShadow"><feDropShadow dx="0" dy="3" stdDeviation="4" floodOpacity=".55"/></filter><linearGradient id="scoreText" x1="0" x2="1"><stop offset="0" stopColor="#71df32"/><stop offset="1" stopColor="#0aa82c"/></linearGradient></defs>
+          <path d={arc(350,350,270,-90,-54)} fill="none" stroke="#e3002d" strokeWidth="42"/>
+          <path d={arc(350,350,270,-54,-18)} fill="none" stroke="#ff6500" strokeWidth="42"/>
+          <path d={arc(350,350,270,-18,18)} fill="none" stroke="#ffd600" strokeWidth="42"/>
+          <path d={arc(350,350,270,18,54)} fill="none" stroke="#69cf2c" strokeWidth="42"/>
+          <path d={arc(350,350,270,54,90)} fill="none" stroke="#10913a" strokeWidth="42"/>
+          {ticks.map(v=>{const a=-90+(v/100)*180,p1=polar(350,350,v%20===0?244:250,a),p2=polar(350,350,270,a);return <line key={v} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#f6f7fb" strokeWidth={v%20===0?5:2} opacity={v%20===0?1:.7}/>})}
+          {[20,40,60,80].map(v=>{const a=-90+(v/100)*180,p1=polar(350,350,242,a),p2=polar(350,350,292,a);return <line key={`b${v}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#fff" strokeWidth="7"/>})}
+          <g transform={`rotate(${angle} 350 350)`} filter="url(#needleShadow)"><polygon points="342,350 358,350 350,116" fill="#f4f4f4"/><polygon points="350,116 358,350 350,350" fill="#cfd3d8"/></g>
+          <circle cx="350" cy="350" r="15" fill="#e7e9ed"/><circle cx="350" cy="350" r="6" fill="#aeb4bd"/>
+          <text x="350" y="270" textAnchor="middle" fontSize="86" fontWeight="900" fill="url(#scoreText)">{score.toFixed(1)}</text>
+          <text x="350" y="310" textAnchor="middle" fontSize="26" fontWeight="700" fill="#b9c1d2">OUT OF 100</text>
+          <text x="350" y="408" textAnchor="middle" fontSize="42" fontWeight="900" fill={zoneColor}>{signal}</text>
+          <text x="55" y="382" textAnchor="middle" fontSize="28" fontWeight="800" fill="#fff">0</text><text x="645" y="382" textAnchor="middle" fontSize="28" fontWeight="800" fill="#fff">100</text>
+        </svg>
+        <div style={{position:"absolute",left:0,right:0,top:0,display:"grid",gridTemplateColumns:"repeat(5,1fr)",textAlign:"center",fontWeight:900,fontSize:15,lineHeight:1.25}}>
+          {[['OVERVALUED','0 – 20','#ff1738'],['SLIGHTLY\nOVERVALUED','20 – 40','#ff8a00'],['FAIR VALUE','40 – 60','#ffd500'],['UNDERVALUED','60 – 80','#45d12d'],['DEEP VALUE','80 – 100','#45d12d']].map(([t,r,c])=><div key={t} style={{whiteSpace:"pre-line",color:c}}>{t}<div style={{color:"#c5cad6",fontWeight:700,marginTop:8}}>{r}</div></div>)}
+        </div>
+        <div style={{textAlign:"center",fontSize:18,color:"#f1f3f7",marginTop:-2}}>{note}</div>
+      </div>
+      <div style={{border:"1px solid #314155",borderRadius:14,padding:"4px 22px",background:"rgba(2,10,20,.28)"}}>
+        {[
+          ["◉","Fair Value",money(fair),"#75ea33"],
+          ["↗","Upside","Price vs. Fair Value",fmtPct(upside),"#4bd12e"],
+          ["◌","Signal",signal,"#ffd600"],
+          ["$","Dividend Yield",dividend===null?"N/A":`${(dividend*100).toFixed(2)}%`,"#d56cff"]
+        ].map((row,i)=>{const hasSub=row.length===5;const icon=row[0],label=row[1],sub=hasSub?row[2]:null,value=hasSub?row[3]:row[2],color=hasSub?row[4]:row[3];return <div key={label} style={{display:"grid",gridTemplateColumns:"58px minmax(0,1fr) auto",gap:14,alignItems:"center",padding:"24px 0",borderBottom:i<3?"1px solid #314155":"none"}}><div style={{width:52,height:52,borderRadius:"50%",display:"grid",placeItems:"center",fontSize:28,fontWeight:900,color,background:`${color}18`,border:`1px solid ${color}30`}}>{icon}</div><div><div style={{fontSize:22,fontWeight:800}}>{label}</div>{sub&&<div style={{color:"#c5cad6",fontSize:15}}>{sub}</div>}</div><div style={{fontSize:28,fontWeight:900,color:label==="Signal"||label==="Upside"?color:"#fff",textAlign:"right"}}>{value}</div></div>})}
+      </div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(150px,1fr))",marginTop:22,border:"1px solid #314155",borderRadius:14,padding:"18px 6px",background:"rgba(2,10,20,.26)"}} className="meterStats">
+      {[
+        ["EPS (TTM)",money(eps),"Trailing Twelve Months"],
+        ["EPS Growth (YoY)",fmtPct(growth),growth!==null&&growth>=.1?"Very Good":"Current Growth"],
+        ["P/E Ratio",pe===null?"N/A":pe.toFixed(2),"Forward / Trailing"],
+        ["P/E Analysis",analysis,"vs. Market Range"]
+      ].map(([label,value,sub],i)=><div key={label} style={{padding:"0 22px",borderLeft:i?"1px solid #314155":"none"}}><div style={{fontSize:20,fontWeight:700,marginBottom:12}}>{label}</div><div style={{fontSize:i===3?24:31,fontWeight:900,color:i===1?"#39d83d":i===3?"#ffd600":"#fff"}}>{value}</div><div style={{color:"#c5cad6",fontSize:15,marginTop:8}}>{sub}</div></div>)}
+    </div>
+    <div style={{marginTop:16,border:"1px solid #24384e",borderRadius:12,padding:"14px 18px",color:"#c8cfdb",fontSize:15}}>ⓘ Valuation based on the stock score model, market conditions, and timing indicators. Current zone: <strong style={{color:zoneColor}}>{zone}</strong>.</div>
+  </div>
+}
+
 function TopTen({market,rows,status,progress,updated,onScan,onStop,onOpen}){const labels={dow:"Dow Jones 30",nasdaq:"NASDAQ-100",sp500:"S&P 500"},scanning=status==="Scanning",pct=progress?.total?Math.round(progress.done/progress.total*100):0;return <div><div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}><div><h2 style={{margin:"0 0 4px"}}>{labels[market]} — Top 10</h2><div style={{color:COLORS.muted}}>Ranks every available constituent with the same 100-point scorecard. Cached results remain until refreshed.</div></div><button onClick={()=>onScan(market)} disabled={scanning} style={{...buttonStyle,background:COLORS.accent,marginLeft:"auto"}}>{rows.length?"Refresh Scan":"Run Full Scan"}</button>{scanning&&<button onClick={()=>onStop(market)} style={{...buttonStyle,background:COLORS.bad}}>Stop</button>}</div>{scanning&&<div style={{marginBottom:14}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:5,fontWeight:700}}><span>Scanning constituents…</span><span>{progress?.done||0}/{progress?.total||0} ({pct}%)</span></div><div style={{height:10,background:COLORS.panel2,borderRadius:20,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:COLORS.accent}}/></div></div>}<div style={{display:"flex",gap:16,color:COLORS.muted,fontSize:13,marginBottom:12}}><span>Status: {status||"Not scanned"}</span><span>Updated: {updated?new Date(updated).toLocaleString():"Never"}</span></div>{!rows.length?<div style={{padding:"50px 20px",textAlign:"center",background:COLORS.panel2,borderRadius:8}}><h3>No ranking cached</h3><p>Run the full scan to calculate the ten highest scores in this index.</p></div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:980}}><thead><tr>{["Rank","Ticker","Company","Score","Grade","View","Price","Fair Value","Margin of Safety","Action"].map(h=><th key={h} style={cell(true)}>{h}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={r.ticker}><td style={cell()}><strong>{i+1}</strong></td><td style={cell()}><strong style={{color:COLORS.accent}}>{r.ticker}</strong></td><td style={cell()}>{r.company_name}</td><td style={cell()}><strong>{Number(r.total).toFixed(1)}</strong></td><td style={cell()}>{r.grade}</td><td style={cell()}>{r.recommendation}</td><td style={cell()}>{money(r.current_price)}</td><td style={cell()}>{money(r.fair_value)}</td><td style={cell()}>{r.mos===null||r.mos===undefined?"N/A":`${(r.mos*100).toFixed(1)}%`}</td><td style={cell()}><button onClick={()=>onOpen(r.ticker)} style={{...buttonStyle,padding:"7px 10px"}}>Open Scorecard</button></td></tr>)}</tbody></table></div>}<p style={{color:COLORS.muted,fontSize:12,marginTop:14}}>Scanning hundreds of stocks can take several minutes and may be affected by Yahoo Finance rate limits. Rankings are a quantitative screen, not personalized financial advice.</p></div>}
 
 const buttonStyle={border:0,cursor:"pointer",padding:"9px 13px",fontSize:14,fontWeight:800,borderRadius:5,background:"#30394A",color:"white"};
