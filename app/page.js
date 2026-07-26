@@ -1,35 +1,12 @@
 "use client";
-
+import React from "react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
-const marketDefinitions = [
-  { name: "Dow", symbol: "^DJI" },
-  { name: "Nasdaq", symbol: "^IXIC" },
-  { name: "S&P 500", symbol: "^GSPC" },
-  { name: "VIX", symbol: "^VIX" },
-  { name: "Bitcoin", symbol: "BTC-USD" },
-  { name: "Ethereum", symbol: "ETH-USD" },
-  { name: "Gold", symbol: "GC=F" },
-  { name: "Oil", symbol: "CL=F" },
-];
+const symbols = [];
 
 export default function Home() {
-  const [markets, setMarkets] = useState(marketDefinitions.map((m) => ({ ...m, amount: "Loading...", pointChange: "", direction: "up" })));
-
-  useEffect(() => {
-    Promise.all(marketDefinitions.map(async (m) => {
-      try {
-        const r = await fetch(`/api/stock?ticker=${encodeURIComponent(m.symbol)}`, { cache: "no-store" });
-        const d = await r.json();
-        const price = Number(d.current_price);
-        return { ...m, amount: Number.isFinite(price) ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "N/A", pointChange: "Live", direction: "up" };
-      } catch {
-        return { ...m, amount: "N/A", pointChange: "", direction: "down" };
-      }
-    })).then(setMarkets);
-  }, []);
-
+  const [markets, setMarkets] = React.useState([]);
+  React.useEffect(() => { fetch("/api/markets").then(r => r.json()).then(d => setMarkets(d.markets || [])); }, []);
   return (
     <main
       style={{
@@ -57,7 +34,7 @@ export default function Home() {
             }}
           >
             {markets.map((market) => {
-              const positive = market.direction === "up";
+              const positive = (market.change || 0) >= 0;
               const movementColor = positive ? "#16813a" : "#c13d3d";
 
               return (
@@ -106,7 +83,7 @@ export default function Home() {
                       lineHeight: 1.15,
                     }}
                   >
-                    {market.amount}
+                    {market.price == null ? "--" : market.price.toLocaleString(undefined,{maximumFractionDigits:2})}
                   </div>
 
                   <div
@@ -118,7 +95,7 @@ export default function Home() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {positive ? "▲" : "▼"} {market.pointChange}
+                    {market.change == null ? "--" : `${market.change >= 0 ? "▲" : "▼"} ${market.change.toFixed(2)} (${market.percent?.toFixed(2)}%)`}
                   </div>
                 </article>
               );

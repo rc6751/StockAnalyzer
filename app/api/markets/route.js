@@ -1,50 +1,34 @@
 import { NextResponse } from "next/server";
 
-const SOURCES = {
-  dow: "https://en.wikipedia.org/wiki/Dow_Jones_Industrial_Average",
-  nasdaq: "https://en.wikipedia.org/wiki/Nasdaq-100",
-  sp500: "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
-};
-const EXPECTED = { dow: 30, nasdaq: 100, sp500: 500 };
+const symbols = [
+  { name: "Dow Jones", symbol: "^DJI" },
+  { name: "Nasdaq", symbol: "^IXIC" },
+  { name: "S&P 500", symbol: "^GSPC" },
+  { name: "VIX", symbol: "^VIX" },
+  { name: "Bitcoin", symbol: "BTC-USD" },
+  { name: "Ethereum", symbol: "ETH-USD" },
+  { name: "Gold", symbol: "GC=F" },
+  { name: "WTI Crude", symbol: "CL=F" },
+];
 
-const decode = (value) => value
-  .replace(/<[^>]*>/g, " ")
-  .replace(/&amp;/g, "&")
-  .replace(/&#160;|&nbsp;/g, " ")
-  .replace(/&#39;/g, "'")
-  .replace(/&quot;/g, '"')
-  .trim();
-
-function extractTickers(html, market) {
-  const tableMatches = [...html.matchAll(/<table[^>]*class="[^"]*wikitable[^"]*"[^>]*>([\s\S]*?)<\/table>/gi)].map(m => m[1]);
-  let best = [];
-  for (const table of tableMatches) {
-    const rows = [...table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map(m => m[1]);
-    const tickers = [];
-    for (const row of rows) {
-      const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => decode(m[1]));
-      if (!cells.length) continue;
-      const candidates = market === "nasdaq" ? cells.slice(0, 2) : cells.slice(0, 1);
-      const ticker = candidates.map(v => v.replace(/\[[^\]]*\]/g, "").replace(/\s+/g, "").replace(/\./g, "-").toUpperCase()).find(v => /^[A-Z][A-Z0-9-]{0,9}$/.test(v));
-      if (ticker && !tickers.includes(ticker)) tickers.push(ticker);
-    }
-    if (Math.abs(tickers.length - EXPECTED[market]) < Math.abs(best.length - EXPECTED[market])) best = tickers;
-  }
-  const max = market === "dow" ? 35 : market === "nasdaq" ? 110 : 520;
-  return best.slice(0, max);
-}
-
-export async function GET(request) {
-  const market = new URL(request.url).searchParams.get("market");
-  if (!SOURCES[market]) return NextResponse.json({ error: "Unknown market." }, { status: 400 });
+export async function GET() {
   try {
-    const response = await fetch(SOURCES[market], { next: { revalidate: 86400 }, headers: { "User-Agent": "StockAnalyzer/1.0" } });
-    if (!response.ok) throw new Error(`Constituent source returned ${response.status}.`);
-    const tickers = extractTickers(await response.text(), market);
-    const minimum = market === "dow" ? 25 : market === "nasdaq" ? 85 : 450;
-    if (tickers.length < minimum) throw new Error(`Only ${tickers.length} constituents were found.`);
-    return NextResponse.json({ market, tickers, count: tickers.length, source: "Wikipedia", updated_at: new Date().toISOString() });
-  } catch (error) {
-    return NextResponse.json({ error: error.message || "Unable to load index constituents." }, { status: 502 });
+    const result = await Promise.all(symbols.map(async (item) => {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.symbol)}?range=5d&interval=1d`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(item.symbol);
+      const json = await res.json();
+      const r = json.chart.result?.[0];
+      const meta = r?.meta || {};
+      const closes = r?.indicators?.quote?.[0]?.close?.filter(Number.isFinite) || [];
+      const price = meta.regularMarketPrice ?? closes.at(-1);
+      const previous = meta.previousClose ?? closes.at(-2);
+      const change = price != null && previous != null ? price - previous : null;
+      const percent = change != null && previous ? (change / previous) * 100 : null;
+      return { ...item, price, change, percent };
+    }));
+    return NextResponse.json({ markets: result, updated: new Date().toISOString() });
+  } catch (e) {
+    return NextResponse.json({ error: "Market feed unavailable" }, { status: 502 });
   }
 }
