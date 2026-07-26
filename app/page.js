@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const HORIZON = "Multi-year";
 const CAPS = { Valuation: 20, Growth: 20, Moat: 20, "Execution Risk": 10, Sentiment: 10, Macro: 20 };
@@ -132,19 +133,25 @@ const PRESET_STOCKS = ["NVDA","TSM","META","QQQ","VOO","MRVL","AMZN","UNH","MU",
 const BREAKDOWN_COLUMNS = ["Valuation","Growth","Moat","Execution Risk","Sentiment","Macro"];
 
 export default function Home() {
+  const router = useRouter();
   const [markets, setMarkets] = React.useState([]);
   const [stocks, setStocks] = React.useState(PRESET_STOCKS);
   const [rows, setRows] = React.useState([]);
   const [newTicker, setNewTicker] = React.useState("");
   const [status, setStatus] = React.useState("Loading stock scores…");
   const [loading, setLoading] = React.useState(false);
+  const [storageReady, setStorageReady] = React.useState(false);
 
   React.useEffect(() => {
     fetch("/api/markets").then(r => r.json()).then(d => setMarkets(d.markets || [])).catch(() => {});
     try {
-      const saved = JSON.parse(localStorage.getItem("stockAnalyzerWatchlist") || "[]");
-      if (Array.isArray(saved) && saved.length) setStocks([...new Set([...PRESET_STOCKS, ...saved])]);
+      const stored = localStorage.getItem("stockAnalyzerWatchlist");
+      if (stored !== null) {
+        const saved = JSON.parse(stored);
+        if (Array.isArray(saved)) setStocks([...new Set(saved)]);
+      }
     } catch {}
+    setStorageReady(true);
   }, []);
 
   const loadScores = React.useCallback(async (symbols) => {
@@ -181,7 +188,9 @@ export default function Home() {
     setLoading(false);
   }, []);
 
-  React.useEffect(() => { loadScores(stocks); }, [stocks, loadScores]);
+  React.useEffect(() => {
+    if (storageReady) loadScores(stocks);
+  }, [stocks, loadScores, storageReady]);
 
   const addStock = (event) => {
     event.preventDefault();
@@ -190,11 +199,20 @@ export default function Home() {
     const next = [...stocks, ticker];
     setStocks(next);
     setNewTicker("");
-    try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(next.filter(symbol => !PRESET_STOCKS.includes(symbol)))); } catch {}
+    try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(next)); } catch {}
   };
 
+  const deleteStock = (ticker) => {
+    const next = stocks.filter(symbol => symbol !== ticker);
+    setStocks(next);
+    setRows(current => current.filter(row => row.ticker !== ticker));
+    try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(next)); } catch {}
+  };
+
+  const openScore=(ticker)=>{try{localStorage.setItem("selectedTicker",ticker);}catch{};router.push("/scorecard");};
+
   const cell = (header = false) => ({
-    padding: "11px 12px", borderBottom: "1px solid #dce5f0", textAlign: header ? "left" : "right",
+    padding: "11px 12px", borderBottom: "1px solid #dce5f0", textAlign: "center", verticalAlign: "middle",
     background: header ? "#eef4fb" : "#ffffff", fontWeight: header ? 800 : 700, whiteSpace: "nowrap"
   });
 
@@ -228,11 +246,12 @@ export default function Home() {
             </div>
           </div>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",minWidth:920}}>
-              <thead><tr><th style={{...cell(true),textAlign:"left"}}>Stock</th><th style={cell(true)}>Score</th>{BREAKDOWN_COLUMNS.map(name=><th key={name} style={cell(true)}>{name}</th>)}</tr></thead>
-              <tbody>{rows.map(row=><tr key={row.ticker}>
-                <td style={{...cell(),textAlign:"left",color:"#073b78",fontWeight:900}}>{row.ticker}</td>
-                {row.error ? <td colSpan={7} style={{...cell(),textAlign:"left",color:"#c13d3d"}}>{row.error}</td> : <><td style={cell()}>{row.total.toFixed(1)}</td>{BREAKDOWN_COLUMNS.map(name=><td key={name} style={cell()}>{Number(row.scores[name] ?? 0).toFixed(1)}</td>)}</>}
+            <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed",minWidth:920}}>
+              <thead><tr><th style={cell(true)}>Stock</th><th style={cell(true)}>Score</th>{BREAKDOWN_COLUMNS.map(name=><th key={name} style={cell(true)}>{name}</th>)}<th style={cell(true)}>Action</th></tr></thead>
+              <tbody>{rows.map(row=><tr key={row.ticker} onClick={()=>openScore(row.ticker)} style={{cursor:"pointer"}}>
+                <td style={{...cell(),color:"#073b78",fontWeight:900}}>{row.ticker}</td>
+                {row.error ? <td colSpan={7} style={{...cell(),color:"#c13d3d"}}>{row.error}</td> : <><td style={cell()}>{row.total.toFixed(1)}</td>{BREAKDOWN_COLUMNS.map(name=><td key={name} style={cell()}>{Number(row.scores[name] ?? 0).toFixed(1)}</td>)}</>}
+                <td style={cell()}><button type="button" onClick={(e)=>{e.stopPropagation();deleteStock(row.ticker);}} aria-label={`Delete ${row.ticker}`} style={{border:0,borderRadius:7,padding:"7px 12px",background:"#c13d3d",color:"#fff",fontWeight:800,cursor:"pointer"}}>Delete</button></td>
               </tr>)}</tbody>
             </table>
           </div>
