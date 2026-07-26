@@ -335,7 +335,7 @@ export default function Home() {
 
         <section style={{padding:20,border:"1px solid #dce5f0",borderRadius:14,boxShadow:"0 8px 24px rgba(25,54,91,.10)",background:"#fff"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",marginBottom:14}}>
-            <div><h1 style={{margin:0,fontSize:32,fontWeight:900,letterSpacing:"1px"}}>STOCK ANALYZER</h1><div style={{marginTop:5,color:"#9CA3AF",fontSize:17,fontStyle:"italic",fontWeight:600}}>Strictly for Individual Stocks</div><div style={{marginTop:5,color:"#66758a",fontWeight:700}}>{status}</div></div>
+            <div><h1 style={{margin:0,fontSize:32,fontWeight:900,letterSpacing:"1px"}}>STOCK ANALYZER</h1><div style={{marginTop:5,color:"#3B82F6",fontSize:17,fontStyle:"italic",fontWeight:600}}>Strictly for Individual Stocks</div></div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               <form onSubmit={addStock} style={{display:"flex",gap:8}}>
                 <input value={newTicker} onChange={e=>setNewTicker(e.target.value)} placeholder="Add ticker" aria-label="Add ticker" style={{width:120,padding:"10px 12px",border:"1px solid #b9c7d8",borderRadius:8,fontSize:15,fontWeight:700,textTransform:"uppercase"}} />
