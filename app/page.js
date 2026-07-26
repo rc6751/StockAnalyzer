@@ -202,14 +202,17 @@ export default function Home() {
     try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(next)); } catch {}
   };
 
+  const openStock = (ticker) => {
+    try { localStorage.setItem("stockAnalyzerSelectedTicker", ticker); } catch {}
+    router.push("/scorecard");
+  };
+
   const deleteStock = (ticker) => {
     const next = stocks.filter(symbol => symbol !== ticker);
     setStocks(next);
     setRows(current => current.filter(row => row.ticker !== ticker));
     try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(next)); } catch {}
   };
-
-  const openScore=(ticker)=>{try{localStorage.setItem("selectedTicker",ticker);}catch{};router.push("/scorecard");};
 
   const cell = (header = false) => ({
     padding: "11px 12px", borderBottom: "1px solid #dce5f0", textAlign: "center", verticalAlign: "middle",
@@ -248,10 +251,10 @@ export default function Home() {
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed",minWidth:920}}>
               <thead><tr><th style={cell(true)}>Stock</th><th style={cell(true)}>Score</th>{BREAKDOWN_COLUMNS.map(name=><th key={name} style={cell(true)}>{name}</th>)}<th style={cell(true)}>Action</th></tr></thead>
-              <tbody>{rows.map(row=><tr key={row.ticker} onClick={()=>openScore(row.ticker)} style={{cursor:"pointer"}}>
-                <td style={{...cell(),color:"#073b78",fontWeight:900}}>{row.ticker}</td>
+              <tbody>{rows.map(row=><tr key={row.ticker} onClick={()=>openStock(row.ticker)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openStock(row.ticker);}}} tabIndex={0} role="link" aria-label={`Open ${row.ticker} on scorecard`} style={{cursor:"pointer"}}>
+                <td style={{...cell(),color:"#073b78",fontWeight:900,textDecoration:"underline"}}>{row.ticker}</td>
                 {row.error ? <td colSpan={7} style={{...cell(),color:"#c13d3d"}}>{row.error}</td> : <><td style={cell()}>{row.total.toFixed(1)}</td>{BREAKDOWN_COLUMNS.map(name=><td key={name} style={cell()}>{Number(row.scores[name] ?? 0).toFixed(1)}</td>)}</>}
-                <td style={cell()}><button type="button" onClick={(e)=>{e.stopPropagation();deleteStock(row.ticker);}} aria-label={`Delete ${row.ticker}`} style={{border:0,borderRadius:7,padding:"7px 12px",background:"#c13d3d",color:"#fff",fontWeight:800,cursor:"pointer"}}>Delete</button></td>
+                <td style={cell()}><button type="button" onClick={event=>{event.stopPropagation();deleteStock(row.ticker);}} onKeyDown={event=>event.stopPropagation()} aria-label={`Delete ${row.ticker}`} style={{border:0,borderRadius:7,padding:"7px 12px",background:"#c13d3d",color:"#fff",fontWeight:800,cursor:"pointer"}}>Delete</button></td>
               </tr>)}</tbody>
             </table>
           </div>

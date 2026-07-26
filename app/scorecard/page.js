@@ -138,6 +138,16 @@ export default function ScorecardPage(){
   useEffect(()=>{try{const saved=JSON.parse(localStorage.getItem("stockAnalyzerTop10")||"{}");if(saved.rankings)setRankings(saved.rankings);if(saved.updated)setScanUpdated(saved.updated)}catch{}},[]);
   const persist=(next,updated)=>{try{localStorage.setItem("stockAnalyzerTop10",JSON.stringify({rankings:next,updated}))}catch{}};
   const run=async(symbolOverride)=>{const symbol=(symbolOverride||ticker).trim().toUpperCase();if(!symbol)return;setLoading(true);setStatus("Loading market data…");try{const r=await fetch(`/api/stock?ticker=${encodeURIComponent(symbol)}`);const j=await r.json();if(!r.ok)throw new Error(j.error||"Data load failed");setData(j);setTicker(symbol);setTab("Overview");setStatus("Analysis complete");}catch(e){setStatus("Data load failed");alert(`Could not load ${symbol}.\n\n${e.message}`);}finally{setLoading(false)}};
+  useEffect(()=>{
+    try {
+      const selected = localStorage.getItem("stockAnalyzerSelectedTicker");
+      if (selected) {
+        localStorage.removeItem("stockAnalyzerSelectedTicker");
+        setTicker(selected);
+        run(selected);
+      }
+    } catch {}
+  },[]);
   const exportReport=()=>{if(!result)return alert("Run an analysis first.");const payload={...result,ticker:data.ticker,company_name:data.company_name,horizon:HORIZON,generated_at:new Date().toISOString(),raw_metrics:data};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${data.ticker}_long_term_analysis.json`;a.click();URL.revokeObjectURL(url)};
   const scanMarket=async market=>{
     if(scanStatus[market]==="Scanning")return;
