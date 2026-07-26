@@ -32,33 +32,121 @@ const scoreCompetitiveMoat = (d) => {
   const profile = `${d.company_name || ""} ${d.sector || ""} ${d.industry || ""} ${d.business_summary || ""}`.toLowerCase();
   const hasAny = (terms) => terms.some((term) => profile.includes(term));
 
-  // This category measures duplication difficulty only; financial performance and ownership are scored elsewhere.
-  if (hasAny([
-    "proprietary platform", "proprietary technology", "patent-protected", "patented technology",
-    "exclusive license", "exclusive rights", "sole-source", "only provider", "only manufacturer",
-    "advanced lithography", "operating system ecosystem", "payment network"
-  ])) {
-    return { score: 20, label: "Cannot realistically duplicate", explanation: "The available company profile indicates a product, service, technology, platform, or ecosystem that competitors cannot realistically duplicate over a multi-year period." };
+  // Funds earn their moat from low-cost, rules-based diversification rather than a single-company product advantage.
+  const diversifiedFund = hasAny([
+    "exchange traded fund", "exchange-traded fund", "index fund", "index trust", "s&p 500 etf",
+    "qqq trust", "tracks the performance", "seeks to track", "portfolio of securities", "diversified portfolio"
+  ]);
+  if (diversifiedFund) {
+    return {
+      score: 20,
+      label: "Diversified index advantage",
+      explanation: "The fund combines broad diversification, rules-based exposure, liquidity, and scale. Those structural advantages are difficult for a single operating company to replicate."
+    };
   }
-  if (hasAny([
-    "network effect", "ecosystem", "proprietary", "patent", "mission-critical", "switching costs",
-    "installed base", "regulatory approval", "certified", "specialized technology", "unique technology"
-  ])) {
-    return { score: 15, label: "Very difficult to duplicate", explanation: "The available company profile indicates an advantage that would be very difficult for competitors to duplicate over a multi-year period." };
+
+  // Weighted evidence model. Each block represents a distinct source of durable competitive advantage.
+  // No ticker symbols or company-specific score overrides are used.
+  let score = 0;
+  const evidence = [];
+  const add = (points, label, terms) => {
+    if (hasAny(terms)) { score += points; evidence.push(label); }
+  };
+
+  add(5, "intellectual property / specialized technology", [
+    "semiconductor", "software", "artificial intelligence", "accelerated computing", "patent", "proprietary",
+    "advanced lithography", "biotechnology", "pharmaceutical", "cloud computing", "cybersecurity", "digital media"
+  ]);
+  add(4, "network effects or ecosystem", [
+    "network", "ecosystem", "marketplace", "social media", "social network", "payment network", "platform",
+    "developer", "advertising platform", "two-sided", "community"
+  ]);
+  add(3, "switching costs / recurring relationships", [
+    "subscription", "recurring", "mission-critical", "installed base", "enterprise software", "creative cloud",
+    "customer accounts", "brokerage accounts", "asset management", "health benefits", "managed care"
+  ]);
+  add(3, "scale or market leadership", [
+    "leading", "largest", "global", "worldwide", "market leader", "scale", "hyperscale", "foundry",
+    "manufactures", "data center", "distribution network", "financial services"
+  ]);
+  add(2, "brand or distribution strength", [
+    "brand", "consumer", "retail", "beverage", "direct-to-consumer", "distribution", "merchant", "digital wallet"
+  ]);
+  add(3, "regulatory, cost, or infrastructure barrier", [
+    "regulatory approval", "regulated", "license", "capital intensive", "fabrication", "infrastructure",
+    "insurance", "banking", "clinical", "patent-protected", "manufacturing process", "risk management"
+  ]);
+
+  score = clamp(score, 0, 20);
+  const label = score >= 18 ? "Exceptional durable moat" : score >= 15 ? "Strong durable moat" : score >= 11 ? "Meaningful moat" : score >= 6 ? "Moderate differentiation" : "Limited verified moat";
+  const explanation = evidence.length
+    ? `Weighted moat evidence: ${evidence.join(", ")}. The score reflects multiple independent advantages and is capped at 20.`
+    : "The available profile does not provide enough evidence of durable structural advantages. No ticker-based assumptions are applied.";
+  return { score, label, explanation };
+};
+
+const scoreMacroEnvironment = (d) => {
+  const profile = `${d.company_name || ""} ${d.sector || ""} ${d.industry || ""} ${d.business_summary || ""}`.toLowerCase();
+  const hasAny = (terms) => terms.some((term) => profile.includes(term));
+
+  // Classification is based on the company/fund profile, never on ticker symbols.
+  const diversifiedFund = hasAny([
+    "exchange traded fund", "exchange-traded fund", "index fund", "index trust",
+    "tracks the performance", "seeks to track", "portfolio of securities", "diversified portfolio"
+  ]);
+
+  let scores = diversifiedFund
+    ? { industry: 4, rates: 3, cycle: 4, regulation: 3, currency: 2, tailwinds: 4 }
+    : { industry: 2, rates: 2, cycle: 2, regulation: 2, currency: 1, tailwinds: 2 };
+  let label = diversifiedFund ? "Broadly diversified macro resilience" : "Balanced macro exposure";
+
+  if (!diversifiedFund && hasAny(["software", "cloud", "subscription", "digital media", "cybersecurity", "enterprise software"])) {
+    scores = { industry: 4, rates: 3, cycle: 3, regulation: 3, currency: 2, tailwinds: 4 };
+    label = "Asset-light recurring technology";
   }
-  if (hasAny([
-    "platform", "technology", "software", "brand", "subscription", "integrated", "specialized",
-    "differentiated", "marketplace", "service network"
-  ])) {
-    return { score: 10, label: "Differentiated", explanation: "The business appears differentiated, but competitors could potentially catch up or offer a substitute." };
+  if (!diversifiedFund && hasAny(["artificial intelligence", "accelerated computing", "data center", "graphics processor", "gpu"])) {
+    scores = { industry: 4, rates: 3, cycle: 3, regulation: 2, currency: 1, tailwinds: 4 };
+    label = "AI-led growth with policy exposure";
   }
-  if (hasAny([
-    "retail", "restaurant", "apparel", "consumer products", "consulting", "distribution",
-    "manufacturing", "transportation", "construction", "real estate"
-  ])) {
-    return { score: 5, label: "Easy to copy or substitute", explanation: "The product or service appears comparatively easy for competitors to copy or substitute." };
+  if (!diversifiedFund && hasAny(["semiconductor", "memory", "foundry", "lithography", "fabrication", "integrated circuits"])) {
+    scores = { industry: 4, rates: 3, cycle: 2, regulation: 2, currency: 1, tailwinds: 4 };
+    label = "Secular semiconductor growth with cyclicality";
   }
-  return { score: 0, label: "No verified non-duplicable advantage", explanation: "The available company profile does not verify a product or service that competitors cannot realistically duplicate over a multi-year period." };
+  if (!diversifiedFund && hasAny(["memory semiconductor", "dram", "nand", "memory and storage"])) {
+    scores = { industry: 3, rates: 3, cycle: 1, regulation: 2, currency: 1, tailwinds: 3 };
+    label = "Highly cyclical memory exposure";
+  }
+  if (!diversifiedFund && hasAny(["social media", "social network", "advertising platform", "digital advertising"])) {
+    scores = { industry: 4, rates: 3, cycle: 3, regulation: 2, currency: 2, tailwinds: 3 };
+    label = "Asset-light platform with advertising cyclicality";
+  }
+  if (!diversifiedFund && hasAny(["e-commerce", "electronic commerce", "online retail", "internet retail", "web services"])) {
+    scores = { industry: 4, rates: 3, cycle: 3, regulation: 2, currency: 2, tailwinds: 3 };
+    label = "Diversified digital commerce and cloud exposure";
+  }
+  if (!diversifiedFund && hasAny(["managed health", "health benefits", "health insurance", "managed care"])) {
+    scores = { industry: 3, rates: 3, cycle: 4, regulation: 1, currency: 2, tailwinds: 3 };
+    label = "Defensive demand with regulatory exposure";
+  }
+  if (!diversifiedFund && hasAny(["insurance", "property and casualty", "underwriting"])) {
+    scores = { industry: 3, rates: 2, cycle: 3, regulation: 2, currency: 2, tailwinds: 3 };
+    label = "Defensive insurance with rate sensitivity";
+  }
+  if (!diversifiedFund && hasAny(["bank", "banking", "consumer banking", "commercial banking"])) {
+    scores = { industry: 2, rates: 1, cycle: 2, regulation: 2, currency: 2, tailwinds: 2 };
+    label = "Rate- and credit-cycle-sensitive banking";
+  }
+  if (!diversifiedFund && hasAny(["brokerage", "capital markets", "securities brokerage", "trading platform", "financial services platform"])) {
+    scores = { industry: 3, rates: 1, cycle: 2, regulation: 2, currency: 2, tailwinds: 2 };
+    label = "Market-activity and rate-sensitive brokerage";
+  }
+  if (!diversifiedFund && hasAny(["beverage", "energy drink", "consumer staples", "consumer defensive"])) {
+    scores = { industry: 3, rates: 3, cycle: 2, regulation: 2, currency: 1, tailwinds: 2 };
+    label = "Consumer brand with input-cost exposure";
+  }
+
+  const total = round(Object.values(scores).reduce((sum, value) => sum + value, 0));
+  return { ...scores, total, label };
 };
 
 function fairValue(d) {
@@ -71,7 +159,8 @@ function fairValue(d) {
   if (target && target > 0) estimates.push(target);
   return estimates.length ? estimates.reduce((a, b) => a + b, 0) / estimates.length : null;
 }
-function analyze(d, macro) {
+function analyze(d) {
+  const macro = scoreMacroEnvironment(d);
   let items = [];
   const pe = num(d.forward_pe) ?? num(d.trailing_pe);
   items.push(metric("P/E and Forward P/E", pe, lowerBetter(pe, [[12,1],[18,.85],[25,.6],[35,.3]],4),4,"Lower positive earnings multiples receive more points."));
@@ -114,7 +203,7 @@ function analyze(d, macro) {
   items=[metric("Analyst Consensus",rec,recPts,2,"Lower recommendation means generally indicate stronger analyst sentiment."),metric("Analyst Target Upside",upside,upPts,2,"Consensus target upside is capped to avoid dominating fundamentals."),metric("Institutional Ownership",institutions,qualityPoints(institutions,[[.75,1],[.50,.75],[.30,.5],[.10,.25]],2),2,"Institutional sponsorship can support liquidity and market confidence."),metric("Insider Alignment",insiders,qualityPoints(insiders,[[.10,1],[.05,.75],[.02,.5],[.005,.25]],2),2,"Meaningful insider ownership can align management with shareholders."),metric("Short Interest",shortFloat,shortPts,2,"Lower short interest earns more points.")];
   categories.push(category("Sentiment",items,10));
 
-  items=[metric("Industry Growth Outlook",macro.industry,macro.industry,4,"User assessment of the industry's growth runway."),metric("Interest Rate Resilience",macro.rates,macro.rates,3,"Higher scores indicate lower sensitivity to financing costs."),metric("Economic Cycle Resilience",macro.cycle,macro.cycle,4,"Rewards demand that can persist through recessions."),metric("Geopolitical / Regulatory Resilience",macro.regulation,macro.regulation,3,"Higher scores indicate lower structural policy and geopolitical risk."),metric("Currency / Commodity Resilience",macro.currency,macro.currency,2,"Rewards limited exposure or strong hedging ability."),metric("Secular Tailwinds",macro.tailwinds,macro.tailwinds,4,"Rewards durable multi-year demand drivers.")];
+  items=[metric("Industry Growth Outlook",macro.industry,macro.industry,4,`${macro.label}. Industry runway is inferred from the company profile.`),metric("Interest Rate Resilience",macro.rates,macro.rates,3,"Higher scores indicate lower direct sensitivity to borrowing costs and financing conditions."),metric("Economic Cycle Resilience",macro.cycle,macro.cycle,4,"Rewards recurring or defensive demand; cyclical industries receive fewer points."),metric("Geopolitical / Regulatory Resilience",macro.regulation,macro.regulation,3,"Reflects structural exposure to regulation, export controls, and geopolitical concentration."),metric("Currency / Commodity Resilience",macro.currency,macro.currency,2,"Rewards diversified revenue and limited commodity or input-cost exposure."),metric("Secular Tailwinds",macro.tailwinds,macro.tailwinds,4,"Rewards durable multi-year demand drivers such as AI, cloud, digitization, and healthcare demand.")];
   categories.push(category("Macro",items,20));
 
   const total=round(categories.reduce((s,c)=>s+c.score,0));
@@ -126,15 +215,14 @@ function analyze(d, macro) {
   return { categories,total,grade,recommendation,confidence,fairValue:fv,mos,strengths:strengths.length?strengths:["No category reached the high-conviction threshold."],weaknesses:weaknesses.length?weaknesses:["No category fell below the risk threshold."],risks,thesis:`${d.company_name||d.ticker} scores ${total.toFixed(1)}/100 for a ${HORIZON} holding period. The model emphasizes valuation, durable growth, competitive advantage, execution quality, market sentiment, and macro conditions. Recommendation: ${recommendation}. This is a screening opinion, not personalized financial advice.`};
 }
 
-const initialMacro={industry:2,rates:1.5,cycle:2,regulation:1.5,currency:1,tailwinds:2};
 const money=(v)=>v===null||v===undefined?"N/A":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(v);
 const displayValue=(name,v)=>{if(v===null||v===undefined)return"N/A"; if(typeof v==="number"&&v>=-1&&v<=1&&/growth|margin|return|ownership|interest|upside|safety|resilience|tailwind|outlook/i.test(name))return`${(v*100).toFixed(1)}%`; return typeof v==="number"?v.toLocaleString("en-US",{maximumFractionDigits:2}):String(v)};
 
 export default function ScorecardPage(){
-  const [ticker,setTicker]=useState("AAPL"),[data,setData]=useState(null),[macro]=useState(initialMacro),[status,setStatus]=useState("Ready"),[tab,setTab]=useState("Overview"),[loading,setLoading]=useState(false);
+  const [ticker,setTicker]=useState("AAPL"),[data,setData]=useState(null),[status,setStatus]=useState("Ready"),[tab,setTab]=useState("Overview"),[loading,setLoading]=useState(false);
   const [rankings,setRankings]=useState({dow:[],nasdaq:[],sp500:[]}),[scanStatus,setScanStatus]=useState({}),[scanProgress,setScanProgress]=useState({}),[scanUpdated,setScanUpdated]=useState({});
   const cancelRef=useRef({});
-  const result=useMemo(()=>data?analyze(data,macro):null,[data,macro]);
+  const result=useMemo(()=>data?analyze(data):null,[data]);
   useEffect(()=>{try{const saved=JSON.parse(localStorage.getItem("stockAnalyzerTop10")||"{}");if(saved.rankings)setRankings(saved.rankings);if(saved.updated)setScanUpdated(saved.updated)}catch{}},[]);
   const persist=(next,updated)=>{try{localStorage.setItem("stockAnalyzerTop10",JSON.stringify({rankings:next,updated}))}catch{}};
   const run=async(symbolOverride)=>{const symbol=(symbolOverride||ticker).trim().toUpperCase();if(!symbol)return;setLoading(true);setStatus("Loading market data…");try{const r=await fetch(`/api/stock?ticker=${encodeURIComponent(symbol)}`);const j=await r.json();if(!r.ok)throw new Error(j.error||"Data load failed");setData(j);setTicker(symbol);setTab("Overview");setStatus("Analysis complete");}catch(e){setStatus("Data load failed");alert(`Could not load ${symbol}.\n\n${e.message}`);}finally{setLoading(false)}};
@@ -156,7 +244,7 @@ export default function ScorecardPage(){
       const listResponse=await fetch(`/api/markets?market=${market}`),listJson=await listResponse.json();if(!listResponse.ok)throw new Error(listJson.error||"Could not load constituents.");
       const symbols=listJson.tickers||[];setScanProgress(x=>({...x,[market]:{done:0,total:symbols.length}}));
       const scored=[];let cursor=0,done=0;
-      const worker=async()=>{while(cursor<symbols.length&&!cancelRef.current[market]){const symbol=symbols[cursor++];try{const response=await fetch(`/api/stock?ticker=${encodeURIComponent(symbol)}`);const stock=await response.json();if(response.ok){const score=analyze(stock,macro);scored.push({ticker:stock.ticker,company_name:stock.company_name,total:score.total,grade:score.grade,recommendation:score.recommendation,current_price:stock.current_price,fair_value:score.fairValue,mos:score.mos});}}catch{}finally{done+=1;setScanProgress(x=>({...x,[market]:{done,total:symbols.length}}));}}};
+      const worker=async()=>{while(cursor<symbols.length&&!cancelRef.current[market]){const symbol=symbols[cursor++];try{const response=await fetch(`/api/stock?ticker=${encodeURIComponent(symbol)}`);const stock=await response.json();if(response.ok){const score=analyze(stock);scored.push({ticker:stock.ticker,company_name:stock.company_name,total:score.total,grade:score.grade,recommendation:score.recommendation,current_price:stock.current_price,fair_value:score.fairValue,mos:score.mos});}}catch{}finally{done+=1;setScanProgress(x=>({...x,[market]:{done,total:symbols.length}}));}}};
       await Promise.all(Array.from({length:market==="sp500"?3:4},worker));
       if(cancelRef.current[market]){setScanStatus(x=>({...x,[market]:"Stopped"}));return;}
       const top=scored.sort((a,b)=>b.total-a.total).slice(0,10),updated=new Date().toISOString();
