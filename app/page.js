@@ -145,12 +145,21 @@ export default function Home() {
   React.useEffect(() => {
     fetch("/api/markets").then(r => r.json()).then(d => setMarkets(d.markets || [])).catch(() => {});
     try {
-      const stored = localStorage.getItem("stockAnalyzerWatchlist");
-      if (stored !== null) {
-        const saved = JSON.parse(stored);
+      const storedV2 = localStorage.getItem("stockAnalyzerWatchlistV2");
+      if (storedV2 !== null) {
+        const saved = JSON.parse(storedV2);
         if (Array.isArray(saved)) setStocks([...new Set(saved)]);
+      } else {
+        // Migrate the older watchlist without losing the built-in preset stocks.
+        const legacyStored = localStorage.getItem("stockAnalyzerWatchlist");
+        const legacySaved = legacyStored === null ? [] : JSON.parse(legacyStored);
+        const migrated = [...new Set([...PRESET_STOCKS, ...(Array.isArray(legacySaved) ? legacySaved : [])])];
+        setStocks(migrated);
+        localStorage.setItem("stockAnalyzerWatchlistV2", JSON.stringify(migrated));
       }
-    } catch {}
+    } catch {
+      setStocks(PRESET_STOCKS);
+    }
     setStorageReady(true);
   }, []);
 
@@ -199,7 +208,7 @@ export default function Home() {
     const next = [...stocks, ticker];
     setStocks(next);
     setNewTicker("");
-    try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(next)); } catch {}
+    try { localStorage.setItem("stockAnalyzerWatchlistV2", JSON.stringify(next)); } catch {}
   };
 
   const openStock = (ticker) => {
@@ -211,7 +220,7 @@ export default function Home() {
     const next = stocks.filter(symbol => symbol !== ticker);
     setStocks(next);
     setRows(current => current.filter(row => row.ticker !== ticker));
-    try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(next)); } catch {}
+    try { localStorage.setItem("stockAnalyzerWatchlistV2", JSON.stringify(next)); } catch {}
   };
 
   const cell = (header = false) => ({
