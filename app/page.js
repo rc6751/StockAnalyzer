@@ -138,13 +138,21 @@ export default function Home() {
   const [newTicker, setNewTicker] = React.useState("");
   const [status, setStatus] = React.useState("Loading stock scores…");
   const [loading, setLoading] = React.useState(false);
+  const [watchlistReady, setWatchlistReady] = React.useState(false);
 
   React.useEffect(() => {
     fetch("/api/markets").then(r => r.json()).then(d => setMarkets(d.markets || [])).catch(() => {});
     try {
-      const saved = JSON.parse(localStorage.getItem("stockAnalyzerWatchlist") || "[]");
-      if (Array.isArray(saved) && saved.length) setStocks([...new Set([...PRESET_STOCKS, ...saved])]);
+      const stored = localStorage.getItem("stockAnalyzerWatchlist");
+      if (stored !== null) {
+        const saved = JSON.parse(stored);
+        if (Array.isArray(saved)) {
+          const cleaned = [...new Set(saved.map(symbol => String(symbol).trim().toUpperCase()).filter(symbol => /^[A-Z0-9.^=-]{1,15}$/.test(symbol)))];
+          setStocks(cleaned);
+        }
+      }
     } catch {}
+    setWatchlistReady(true);
   }, []);
 
   const loadScores = React.useCallback(async (symbols) => {
@@ -181,7 +189,14 @@ export default function Home() {
     setLoading(false);
   }, []);
 
-  React.useEffect(() => { loadScores(stocks); }, [stocks, loadScores]);
+  React.useEffect(() => {
+    if (watchlistReady) loadScores(stocks);
+  }, [stocks, loadScores, watchlistReady]);
+
+  React.useEffect(() => {
+    if (!watchlistReady) return;
+    try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(stocks)); } catch {}
+  }, [stocks, watchlistReady]);
 
   const addStock = (event) => {
     event.preventDefault();
@@ -190,11 +205,15 @@ export default function Home() {
     const next = [...stocks, ticker];
     setStocks(next);
     setNewTicker("");
-    try { localStorage.setItem("stockAnalyzerWatchlist", JSON.stringify(next.filter(symbol => !PRESET_STOCKS.includes(symbol)))); } catch {}
+  };
+
+  const removeStock = (ticker) => {
+    setStocks(current => current.filter(symbol => symbol !== ticker));
+    setRows(current => current.filter(row => row.ticker !== ticker));
   };
 
   const cell = (header = false) => ({
-    padding: "11px 12px", borderBottom: "1px solid #dce5f0", textAlign: header ? "left" : "right",
+    padding: "11px 12px", borderBottom: "1px solid #dce5f0", textAlign: "center", width:"12.5%",
     background: header ? "#eef4fb" : "#ffffff", fontWeight: header ? 800 : 700, whiteSpace: "nowrap"
   });
 
@@ -229,9 +248,14 @@ export default function Home() {
           </div>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",minWidth:920}}>
-              <thead><tr><th style={{...cell(true),textAlign:"left"}}>Stock</th><th style={cell(true)}>Score</th>{BREAKDOWN_COLUMNS.map(name=><th key={name} style={cell(true)}>{name}</th>)}</tr></thead>
+              <thead><tr><th style={{...cell(true)}}>Stock</th><th style={cell(true)}>Score</th>{BREAKDOWN_COLUMNS.map(name=><th key={name} style={cell(true)}>{name}</th>)}</tr></thead>
               <tbody>{rows.map(row=><tr key={row.ticker}>
-                <td style={{...cell(),textAlign:"left",color:"#073b78",fontWeight:900}}>{row.ticker}</td>
+                <td style={{...cell(),color:"#073b78",fontWeight:900}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+                    <span>{row.ticker}</span>
+                    <button type="button" onClick={()=>removeStock(row.ticker)} aria-label={`Remove ${row.ticker}`} title={`Remove ${row.ticker}`} style={{width:25,height:25,padding:0,border:"1px solid #d5a5a5",borderRadius:6,background:"#fff4f4",color:"#b42323",fontSize:17,fontWeight:900,lineHeight:1,cursor:"pointer"}}>×</button>
+                  </div>
+                </td>
                 {row.error ? <td colSpan={7} style={{...cell(),textAlign:"left",color:"#c13d3d"}}>{row.error}</td> : <><td style={cell()}>{row.total.toFixed(1)}</td>{BREAKDOWN_COLUMNS.map(name=><td key={name} style={cell()}>{Number(row.scores[name] ?? 0).toFixed(1)}</td>)}</>}
               </tr>)}</tbody>
             </table>
