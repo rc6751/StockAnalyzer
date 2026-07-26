@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const symbols = [["Dow", "^DJI"],["Nasdaq", "^IXIC"],["S&P 500", "^GSPC"],["VIX", "^VIX"],["Bitcoin", "BTC-USD"],["Ether", "ETH.CM"],["Gold", "GC=F"],["Oil", "CL=F"]];
+const symbols = [["Dow", "^DJI"],["Nasdaq", "^IXIC"],["S&P 500", "^GSPC"],["VIX", "^VIX"],["Bitcoin", "BTC-USD"],["Ethereum", "ETH"],["Gold", "GC=F"],["Oil", "CL=F"]];
 
 export async function GET() {
   try {
