@@ -266,6 +266,9 @@ export default function ScorecardPage(){
 function ValuationMeter({data,result}){
   const score=clamp(Number(result.total)||0,0,100);
   const angle=-90+(score/100)*180;
+  const needleColor = score<20?"#e3002d":score<40?"#ff6500":score<60?"#ffd600":score<80?"#69cf2c":"#10913a";
+  const needleColor = score<20?"#e3002d":score<40?"#ff6500":score<60?"#ffd600":score<80?"#69cf2c":"#10913a";
+
   const fair=result.fairValue;
   const upside=fair&&data.current_price?fair/data.current_price-1:null;
   const pe=num(data.forward_pe)??num(data.trailing_pe);
@@ -293,7 +296,7 @@ function ValuationMeter({data,result}){
           <path d={arc(350,350,270,54,90)} fill="none" stroke="#10913a" strokeWidth="42"/>
           {ticks.map(v=>{const a=-90+(v/100)*180,p1=polar(350,350,v%20===0?244:250,a),p2=polar(350,350,270,a);return <line key={v} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#f6f7fb" strokeWidth={v%20===0?5:2} opacity={v%20===0?1:.7}/>})}
           {[20,40,60,80].map(v=>{const a=-90+(v/100)*180,p1=polar(350,350,242,a),p2=polar(350,350,292,a);return <line key={`b${v}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#fff" strokeWidth="7"/>})}
-          <g transform={`rotate(${angle} 350 350)`} filter="url(#needleShadow)"><polygon points="342,350 358,350 350,116" fill="#f4f4f4"/><polygon points="350,116 358,350 350,350" fill="#cfd3d8"/></g>
+          <g transform={`rotate(${angle} 350 350)`} filter="url(#needleShadow)"><polygon points="338,350 362,350 350,116" fill={needleColor}/><polygon points="350,116 362,350 350,350" fill={needleColor}/></g>
           <circle cx="350" cy="350" r="15" fill="#e7e9ed"/><circle cx="350" cy="350" r="6" fill="#aeb4bd"/>
           <text x="350" y="270" textAnchor="middle" fontSize="86" fontWeight="900" fill="url(#scoreText)">{score.toFixed(1)}</text>
           <text x="350" y="310" textAnchor="middle" fontSize="26" fontWeight="700" fill="#b9c1d2">OUT OF 100</text>
