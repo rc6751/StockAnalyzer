@@ -307,11 +307,12 @@ function ValuationMeter({data,result}){
       </div>
       <div style={{border:"1px solid #314155",borderRadius:14,padding:"4px 22px",background:"rgba(2,10,20,.28)"}}>
         {[
+          ["●","Stock Price",money(data.current_price),"#4EA1FF"],
           ["◉","Fair Value",money(fair),"#75ea33"],
           ["↗","Upside","Price vs. Fair Value",fmtPct(upside),"#4bd12e"],
           ["◌","Signal",signal,"#ffd600"],
           ["$","Dividend Yield",dividend===null?"N/A":`${(dividend*100).toFixed(2)}%`,"#d56cff"]
-        ].map((row,i)=>{const hasSub=row.length===5;const icon=row[0],label=row[1],sub=hasSub?row[2]:null,value=hasSub?row[3]:row[2],color=hasSub?row[4]:row[3];return <div key={label} style={{display:"grid",gridTemplateColumns:"58px minmax(0,1fr) auto",gap:14,alignItems:"center",padding:"24px 0",borderBottom:i<3?"1px solid #314155":"none"}}><div style={{width:52,height:52,borderRadius:"50%",display:"grid",placeItems:"center",fontSize:28,fontWeight:900,color,background:`${color}18`,border:`1px solid ${color}30`}}>{icon}</div><div><div style={{fontSize:22,fontWeight:800}}>{label}</div>{sub&&<div style={{color:"#c5cad6",fontSize:15}}>{sub}</div>}</div><div style={{fontSize:28,fontWeight:900,color:label==="Signal"||label==="Upside"?color:"#fff",textAlign:"right"}}>{value}</div></div>})}
+        ].map((row,i)=>{const hasSub=row.length===5;const icon=row[0],label=row[1],sub=hasSub?row[2]:null,value=hasSub?row[3]:row[2],color=hasSub?row[4]:row[3];return <div key={label} style={{display:"grid",gridTemplateColumns:"58px minmax(0,1fr) auto",gap:14,alignItems:"center",padding:"24px 0",borderBottom:i<4?"1px solid #314155":"none"}}><div style={{width:52,height:52,borderRadius:"50%",display:"grid",placeItems:"center",fontSize:28,fontWeight:900,color,background:`${color}18`,border:`1px solid ${color}30`}}>{icon}</div><div><div style={{fontSize:22,fontWeight:800}}>{label}</div>{sub&&<div style={{color:"#c5cad6",fontSize:15}}>{sub}</div>}</div><div style={{fontSize:28,fontWeight:900,color:label==="Signal"||label==="Upside"?color:"#fff",textAlign:"right"}}>{value}</div></div>})}
       </div>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(150px,1fr))",marginTop:22,border:"1px solid #314155",borderRadius:14,padding:"18px 6px",background:"rgba(2,10,20,.26)"}} className="meterStats">
