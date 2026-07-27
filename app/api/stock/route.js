@@ -85,13 +85,17 @@ export async function GET(request) {
     if (!root) throw new Error(summaryJson?.quoteSummary?.error?.description || "Ticker data was not found.");
 
     let closes = [];
+    let chartMeta = {};
     if (chartResponse.ok) {
       const chartJson = await chartResponse.json();
-      closes = (chartJson?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []).filter((x) => Number.isFinite(x));
+      const chartRoot = chartJson?.chart?.result?.[0];
+      chartMeta = chartRoot?.meta || {};
+      closes = (chartRoot?.indicators?.quote?.[0]?.close || []).filter((x) => Number.isFinite(x));
     }
 
     let price5yCagr = null;
     let volatility = null;
+    let rsi14 = null;
     if (closes.length > 1) {
       const years = Math.min(5 * 252, closes.length - 1);
       const start = closes[closes.length - years - 1];
@@ -105,6 +109,34 @@ export async function GET(request) {
         const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
         const variance = returns.reduce((a, b) => a + (b - mean) ** 2, 0) / (returns.length - 1);
         volatility = Math.sqrt(variance) * Math.sqrt(252);
+      }
+
+      // 14-period RSI using Wilder's smoothing, calculated from Yahoo daily closes.
+      const period = 14;
+      if (closes.length > period) {
+        let averageGain = 0;
+        let averageLoss = 0;
+        for (let i = 1; i <= period; i += 1) {
+          const change = closes[i] - closes[i - 1];
+          averageGain += Math.max(change, 0);
+          averageLoss += Math.max(-change, 0);
+        }
+        averageGain /= period;
+        averageLoss /= period;
+
+        for (let i = period + 1; i < closes.length; i += 1) {
+          const change = closes[i] - closes[i - 1];
+          const gain = Math.max(change, 0);
+          const loss = Math.max(-change, 0);
+          averageGain = ((averageGain * (period - 1)) + gain) / period;
+          averageLoss = ((averageLoss * (period - 1)) + loss) / period;
+        }
+
+        rsi14 = averageLoss === 0
+          ? 100
+          : averageGain === 0
+            ? 0
+            : 100 - (100 / (1 + (averageGain / averageLoss)));
       }
     }
 
@@ -123,7 +155,8 @@ export async function GET(request) {
       sector: text(a.sector) || "Unknown",
       industry: text(a.industry) || "Unknown",
       business_summary: text(a.longBusinessSummary) || "",
-      current_price: raw(f.currentPrice) ?? raw(p.regularMarketPrice),
+      // Yahoo regular-market quote price, with Yahoo chart metadata as a fallback.
+      current_price: raw(p.regularMarketPrice) ?? raw(chartMeta.regularMarketPrice) ?? raw(f.currentPrice),
       market_cap: raw(p.marketCap),
       trailing_pe: raw(s.trailingPE),
       forward_pe: raw(k.forwardPE),
@@ -144,7 +177,11 @@ export async function GET(request) {
       debt_to_equity: raw(f.debtToEquity),
       current_ratio: raw(f.currentRatio),
       quick_ratio: raw(f.quickRatio),
-      dividend_growth: raw(s.fiveYearAvgDividendYield) ? null : raw(k.dividendYield),
+      // Yahoo reports dividend yield as a decimal (for example, 0.006 means 0.6%).
+      dividend_yield: raw(s.dividendYield) ?? raw(k.dividendYield),
+      dividend_rate: raw(s.dividendRate),
+      five_year_avg_dividend_yield: raw(s.fiveYearAvgDividendYield),
+      dividend_growth: null,
       payout_ratio: raw(s.payoutRatio),
       short_percent_float: raw(k.shortPercentOfFloat),
       held_percent_institutions: raw(k.heldPercentInstitutions),
@@ -154,6 +191,7 @@ export async function GET(request) {
       beta: raw(k.beta),
       price_5y_cagr: price5yCagr,
       volatility,
+      rsi_14: rsi14,
       analyst_count: raw(f.numberOfAnalystOpinions),
       currency: text(p.currency) || "USD",
     });
